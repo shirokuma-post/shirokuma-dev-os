@@ -1,0 +1,16 @@
+{
+  "name": "shirokuma-dev-os",
+  "version": "1.0.0",
+  "description": "開発の普遍原理を束ねた汎用開発OS。思考様式ガード(engineering-doctrine)・文書運用憲法(doc-constitution)・参謀モードの指揮系統(staff-officer) を収録し、新規プロジェクト用の CLAUDE / INVARIANTS / DOC_CONSTITUTION テンプレートを同梱する。固有名を剥いた『骨』だけを持ち、どの開発にも持ち込める。",
+  "author": {
+    "name": "shirokuma"
+  },
+  "keywords": [
+    "engineering-doctrine",
+    "doc-constitution",
+    "staff-officer",
+    "orchestration",
+    "templates",
+    "universal"
+  ]
+}
