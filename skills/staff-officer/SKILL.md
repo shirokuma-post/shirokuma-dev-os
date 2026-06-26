@@ -89,6 +89,21 @@ Layer 4: 統合             検品 + ゲート通過後のみマージ・報告
 > ライン固有の注意点（ブランドカラー・スキーマ指定・index 作法など）は各プロジェクトの
 > `INVARIANTS.md` / デザインシステムから引いて Worker に渡す。**参謀がここに固有値を覚えない。**
 
+### 並列パターンの選び分け
+
+並列実行には 2 種類ある。task の性質で選ぶ:
+
+| パターン | 仕組み | 強み | 弱み | 使う場面 |
+|---|---|---|---|---|
+| **subagent fan-out** | Agent ツール並列起動・各 worker は独立 context | 各 worker が独立 read window + 重い処理を分散 | **数字の hybrid hallucination** が起きる（複数 subagent + 期待値明示 + 構造化フォーマット要求で再現性高い） | scope 探索 / 個別 file 編集 / 各 repo の独立修正 |
+| **参謀直接の Bash 並列** | 1 つの bash で `for repo in ...; do` 等の loop | 集計値が確実（hallucination なし）・cwd 制御を参謀が完全把握 | 並列度は CPU と shell 並列性に依存 | 件数集計 / 多 repo 状態取得 / horizontal commit + push |
+
+**判断軸**: 数字を信用する task（件数集計 / 横断状態取得）は参謀直接の Bash 並列。scope 探索 / 個別変更は subagent fan-out。
+
+**段間 isolation 規律**: 多 worker fan-out で件数を渡すと **期待値転載で hybrid hallucination を誘発**する。worker への prompt には scope（path glob / rule 名 / 修正方針）のみ渡し、件数は渡さない。参謀は worker 完了後に git diff / lint 実走で実態 verify（worker 報告の集計を盲信しない）。
+
+> 数字汚染 risk の高い task（番人 FAIL 解消 / 件数調査 / 横断 task）には、3 段分離テンプレ（発見 → 検証 → 修正 → SecGate）を使う。worker 報告のフォーマットも 5-6 要素（raw command literal + raw output + 集計過程 + self-check 4 項目）に絞り、結論 / 解釈 / 背景言及 slot は物理排除する。
+
 ---
 
 ## Phase 3: 検品（Worker 完了後・別 Agent）
