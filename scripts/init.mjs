@@ -182,6 +182,7 @@ async function main() {
   console.log(`   - engineering-doctrine-universal (= 配布版・汎用 6 規律)`);
   console.log(`   - doc-constitution               (= 文書運用憲法)`);
   console.log(`   - staff-officer                  (= 参謀フロー 5 層 × 4 ライン)`);
+  console.log(`   - session-operations             (= マルチセッション運用の型)`);
 
   console.log(`\n🎉 完了\n`);
 }
