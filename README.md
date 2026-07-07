@@ -95,28 +95,32 @@ shirokuma-dev-os/  (= 2 層を同梱したまま配布)
 
 ## 使い方
 
-### A. Claude Code に直接インストール (= プラグインとして使う)
-
-```bash
-# 方法 1: git clone で ~/.claude/skills/ に配置
-git clone https://github.com/shirokuma-post/shirokuma-dev-os.git \
-  ~/.claude/skills/shirokuma-dev-os
-```
+### A. Claude Code にインストール (= プラグインとして使う)
 
 ```
-# 方法 2: Claude Code の plugin marketplace 経由
+# Claude Code 内で (plugin marketplace 経由・推奨)
 /plugin marketplace add shirokuma-post/shirokuma-dev-os
 /plugin install shirokuma-dev-os
 ```
 
-Claude Code 起動時に自動でロードされる。各スキル (engineering-doctrine 等) は判断時に自動発火。
-ただし **skill の自動発火は確率的** — だからこそ B の templates 展開で Intent Anchor を常時ロード位置に置く (= 発火を運に任せない)。
+インストール後、各スキル (engineering-doctrine 等) が Claude Code に登録され、判断時に自動発火する。
+
+> ⚠️ **git clone を `~/.claude/skills/` に置くだけでは skill は登録されない。**
+> 個人 skill として発見されるのは `~/.claude/skills/<skill名>/SKILL.md` の 1 階層構造のみで、
+> 本 repo は skill を `skills/` 配下に入れ子で持つ **plugin 形式**。skill を発火させる導入は上の plugin install。
+> clone は「読む」「templates を展開する (下記 B)」用途に使う:
+>
+> ```bash
+> git clone https://github.com/shirokuma-post/shirokuma-dev-os.git
+> ```
+
+なお **skill の自動発火は確率的** — だからこそ B の templates 展開で Intent Anchor を常時ロード位置に置く (= 発火を運に任せない)。
 
 ### B. 新規プロジェクトに templates を展開
 
 ```bash
 # CLI で 3 ファイル (CLAUDE.md / INVARIANTS.md / DOC_CONSTITUTION.md) を一括生成
-cd ~/.claude/skills/shirokuma-dev-os
+cd shirokuma-dev-os   # clone した repo (置き場所は任意)
 node scripts/init.mjs ~/projects/my-saas --name=my-saas
 ```
 

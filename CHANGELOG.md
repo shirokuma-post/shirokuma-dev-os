@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.1] - 2026-07-08
+
+### Fixed
+- **README のインストール導線** — `git clone` を `~/.claude/skills/` に置く方法では skill が登録されない（個人 skill の発見は `<skill名>/SKILL.md` の 1 階層のみ・本 repo は plugin 形式）。主導線を `/plugin install` に変更し、clone は「読む / templates 展開」用と明記
+- GOVERNANCE 継承図の下流例から固有プロジェクト名を除去（generic 化）
+- v1.2.0 / v1.2.1 の git tag 付与開始
+
 ## [1.2.0] - 2026-07-08
 
 ### Added
