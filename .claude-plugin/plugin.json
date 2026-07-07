@@ -8,10 +8,7 @@
   },
   "license": "MIT",
   "homepage": "https://github.com/shirokuma-post/shirokuma-dev-os",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/shirokuma-post/shirokuma-dev-os.git"
-  },
+  "repository": "https://github.com/shirokuma-post/shirokuma-dev-os",
   "keywords": [
     "engineering-doctrine",
     "engineering-doctrine-universal",
