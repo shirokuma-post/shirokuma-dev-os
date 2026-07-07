@@ -6,6 +6,8 @@
 
 業界の名作 (Toyota Production System / Site Reliability Engineering / Domain-Driven Design 等) を一本の幹 **「顧客の安全 > 進捗」** で統合し、AI agent が判断の瞬間に立ち止まれるよう実装してある。
 
+**対象読者**: 日本語で開発する個人〜小規模チーム (内容は言語・スタック非依存。ドキュメントは日本語)。
+
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Claude Code](https://img.shields.io/badge/Claude%20Code-Plugin-blue)](https://docs.anthropic.com/claude-code)
 
@@ -27,17 +29,22 @@ AI agent (Claude Code / Cursor / Aider 等) は **「楽な道」を選びがち
 
 ```
 shirokuma-dev-os/
-├── GOVERNANCE.md                       ← 第1層 ↔ 第2層 の継承統治
-├── plugin.json                         ← Claude Code プラグイン定義
+├── GOVERNANCE.md                       ← 継承・還流の統治 (配布形態の定義)
+├── CHANGELOG.md
+├── .claude-plugin/
+│   ├── plugin.json                     ← Claude Code プラグイン定義
+│   └── marketplace.json                ← marketplace 経由インストール用
 ├── skills/
-│   ├── engineering-doctrine/           ← 思考様式 6 規律 (専用層)
-│   ├── engineering-doctrine-universal/ ← 思考様式 6 規律 (配布版・蒸留)
-│   ├── doc-constitution/               ← 文書運用憲法
-│   └── staff-officer/                  ← 参謀フロー (5 層 × 4 ライン)
+│   ├── engineering-doctrine/           ← 思考様式 6 規律 + Intent Anchor (第1層・実例集)
+│   ├── engineering-doctrine-universal/ ← 思考様式 6 規律 + Intent Anchor (配布版・蒸留)
+│   ├── doc-constitution/               ← 文書運用憲法 (7条 + Tier)
+│   ├── staff-officer/                  ← 参謀フロー (5 層 × 4 ライン + 振り返り)
+│   └── session-operations/             ← マルチセッション運用の型
 ├── templates/
-│   ├── CLAUDE.template.md              ← 新規プロジェクト用テンプレ
+│   ├── CLAUDE.template.md              ← 新規プロジェクト用テンプレ (Intent Anchor 同梱)
 │   ├── INVARIANTS.template.md
-│   └── DOC_CONSTITUTION.template.md
+│   ├── DOC_CONSTITUTION.template.md
+│   └── RETROSPECTIVE.template.md       ← 振り返り 5 軸 (タスク完遂ごとにコピー)
 ├── scripts/
 │   ├── audit-self-integrity.mjs        ← 自己整合性 CI
 │   └── init.mjs                        ← 新規プロジェクト初期化 CLI
@@ -62,6 +69,8 @@ shirokuma-dev-os/
 
 判断の流れ: **規律 4 → 3 → 2 → 1** (= 構造で位置取り → 実測で裏取り → 根源を断つ → 逃げずに潰す) + 規律 5/6 で土台固定。
 
+さらに 6 規律の前段に **Intent Anchor (意図の先出し宣言)** を置く (v1.2〜)。「skill 遵守 ≠ skill 発火」— AI の attention は目の前の Read 結果に hijack されるため、**意思決定の前**に目的と scope を宣言して anchor する。宣言フォーマットは常時ロードされる `CLAUDE.md` テンプレと Worker 指示テンプレの両方に同梱 (実証: 8 Worker 並列で scope drift 0 件)。
+
 詳細: [skills/engineering-doctrine/SKILL.md](skills/engineering-doctrine/SKILL.md) (= 専用層) / [skills/engineering-doctrine-universal/SKILL.md](skills/engineering-doctrine-universal/SKILL.md) (= 配布版)
 
 ---
@@ -69,15 +78,15 @@ shirokuma-dev-os/
 ## 2 層継承構造 (= 専用層 + 配布版)
 
 ```
-shirokuma-dev-os/
+shirokuma-dev-os/  (= 2 層を同梱したまま配布)
         │
-        ├─ 第 1 層: しろくま専用層 (n=1 経験則を濃いまま保持)
-        │   └─ engineering-doctrine / doc-constitution / staff-officer
+        ├─ 第 1 層: 作者の専用層 (n=1 経験則を濃いまま保持)
+        │   └─ engineering-doctrine  ← 「規律がどんな失敗から生まれたか」の実例集として読む
         │
-        └─ 第 2 層: 配布版 (普遍核を蒸留・固有名を完全に剥いた)
-            └─ engineering-doctrine-universal
+        └─ 第 2 層: 発火推奨セット (固有名・スタック前提を剥いた普遍核)
+            └─ engineering-doctrine-universal / doc-constitution / staff-officer / session-operations
                 ↑
-                他開発者 / 他チーム / 他言語・他スタックでも適用可能
+                外部プロジェクトで実際に運用に組み込むのはこちら + templates/
 ```
 
 詳細: [GOVERNANCE.md](GOVERNANCE.md)
@@ -89,12 +98,19 @@ shirokuma-dev-os/
 ### A. Claude Code に直接インストール (= プラグインとして使う)
 
 ```bash
-# プラグインを ~/.claude/skills/ にインストール
+# 方法 1: git clone で ~/.claude/skills/ に配置
 git clone https://github.com/shirokuma-post/shirokuma-dev-os.git \
   ~/.claude/skills/shirokuma-dev-os
 ```
 
+```
+# 方法 2: Claude Code の plugin marketplace 経由
+/plugin marketplace add shirokuma-post/shirokuma-dev-os
+/plugin install shirokuma-dev-os
+```
+
 Claude Code 起動時に自動でロードされる。各スキル (engineering-doctrine 等) は判断時に自動発火。
+ただし **skill の自動発火は確率的** — だからこそ B の templates 展開で Intent Anchor を常時ロード位置に置く (= 発火を運に任せない)。
 
 ### B. 新規プロジェクトに templates を展開
 
@@ -105,6 +121,7 @@ node scripts/init.mjs ~/projects/my-saas --name=my-saas
 ```
 
 実行後、生成された各ファイルの `{{...}}` placeholder を埋めればプロジェクト固有層が完成。
+`RETROSPECTIVE.template.md` は init 対象外 — 大きめのタスク完遂ごとに手でコピーして 5 軸を埋める (→ `staff-officer` Phase 5)。
 
 ### C. 開発に "思想" を組み込みたい (= プラグイン使わず参考にする)
 
@@ -133,6 +150,12 @@ CI / lint / SecGate / pre-commit hook 等が FAIL を指摘したら **無条件
 
 緩めた瞬間、AI agent は楽な方に流れる癖を強化学習する。これは累積で顧客の安全を侵食する。
 
+### 4. 「発火を運に任せない」(Intent Anchor)
+
+規律は「読まれて発火したら」効く — だが **skill 遵守 ≠ skill 発火**。発火は確率的で、subagent には届かないことがある。
+
+だから発火装置を分離する: **意思決定の前**に目的と scope を宣言する Intent Anchor を、毎ターン必ず読まれる位置 (プロジェクト `CLAUDE.md` 最上段 + Worker 指示テンプレ冒頭) に置く。事後チェックで捕まえるのではなく、hijack が起きる前に anchor する。
+
 ---
 
 ## 業界との位置付け
@@ -143,7 +166,7 @@ CI / lint / SecGate / pre-commit hook 等が FAIL を指摘したら **無条件
 | Claude Code 公式 skills | `anthropic-skills:*` | 個別 skill 集合・上下関係不在 |
 | 開発組織運営フレームワーク | Spotify Backstage Tech Radar | 思想近いが AI agent 向けではない |
 | エンジニアリング哲学書 | Toyota Way / SRE Book / DDD | 思想正典・実装ツール化されてない |
-| **本プラグイン** | **`shirokuma-dev-os`** | **AI agent 経由運用 + 2 層継承 + 還流ルール = 業界に類例なし** |
+| **本プラグイン** | **`shirokuma-dev-os`** | **AI agent 経由運用 + 2 層継承 + 還流ルール + 発火装置 (Intent Anchor) の統合 = 類例が少ない** |
 
 ---
 
