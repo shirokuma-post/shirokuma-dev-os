@@ -121,6 +121,7 @@ shirokuma-dev-os/  (= 2 層を同梱したまま配布)
 ```bash
 # CLI で 3 ファイル (CLAUDE.md / INVARIANTS.md / DOC_CONSTITUTION.md) を一括生成
 cd shirokuma-dev-os   # clone した repo (置き場所は任意)
+mkdir -p ~/projects/my-saas   # 展開先は既存ディレクトリであること (誤 path への生成防止)
 node scripts/init.mjs ~/projects/my-saas --name=my-saas
 ```
 
