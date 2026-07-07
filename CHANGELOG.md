@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.2.2] - 2026-07-08
+
+### Fixed
+- **plugin.json `repository` を string 化** — object 形式 (npm 流) だと `claude plugin install` の manifest validation で reject される。**live E2E で検出** (`claude plugin validate` は marketplace.json しか見ないため素通りしていた)
+- marketplace.json に `metadata.description` 追加 (validate warning 解消)
+
+### Verified (live E2E)
+- `claude plugin marketplace add shirokuma-post/shirokuma-dev-os` → GitHub clone + validate + 登録 ✔
+- `claude plugin install shirokuma-dev-os@shirokuma-dev-os-marketplace` → install 成功 (scope: user) ✔
+
 ## [1.2.1] - 2026-07-08
 
 ### Fixed
