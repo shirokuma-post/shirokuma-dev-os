@@ -10,5 +10,8 @@
       "source": "./",
       "description": "開発の普遍原理を束ねた汎用開発OS — 思考様式6規律 + Intent Anchor + 文書運用憲法 + 参謀フロー + マルチセッション運用の型"
     }
-  ]
+  ],
+  "metadata": {
+    "description": "開発の普遍原理を束ねた汎用開発OS (shirokuma-dev-os) の公式 marketplace。思考様式6規律 + Intent Anchor + 文書運用憲法 + 参謀フロー + マルチセッション運用の型を配布する。"
+  }
 }
