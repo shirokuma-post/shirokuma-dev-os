@@ -8,6 +8,8 @@
 
 **対象読者**: 日本語で開発する個人〜小規模チーム (内容は言語・スタック非依存。ドキュメントは日本語)。
 
+**60 秒で価値を見る** → [demo/](demo/)（Intent Anchor が AI の scope drift を止める before/after・再現可能）
+
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Claude Code](https://img.shields.io/badge/Claude%20Code-Plugin-blue)](https://docs.anthropic.com/claude-code)
 
@@ -148,6 +150,16 @@ node scripts/init.mjs ~/projects/my-saas --name=my-saas
 - **第 2 層 (配布版)**: 普遍核だけを蒸留 (どのスタックでも使える)
 
 第 1 層で固めてから第 2 層へ蒸留する流れ = OSS の upstream contribution と同型。
+
+### 2.5. Dogfooding（自分の規律で自分を検品した）
+
+このプラグインは、自分の規律を自分の開発に適用している。実例:
+
+- **規律3「push 成功 ≠ 配布可・実測で確かめる」がリリース直前に自分のバグを止めた** —
+  `claude plugin validate` は PASS したのに、install の live E2E で `plugin.json` の
+  `repository` フィールド不正を検出（validate は marketplace 側しか見ないため素通りしていた）。
+  「検証したから大丈夫」で出荷せず実測したから捕まえられた（→ [CHANGELOG](CHANGELOG.md) v1.2.2）。
+- Intent Anchor の効果は [demo/](demo/) で before/after を再現可能にしてある。
 
 ### 3. 「番人を緩めない」
 
