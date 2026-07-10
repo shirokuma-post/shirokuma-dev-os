@@ -264,7 +264,7 @@ live smoke 実測ログ (2026-07-11・要点):
 
 ```text
 $ codex plugin marketplace add ~/.claude/skills/shirokuma-dev-os
-Added marketplace `shirokuma-dev-os-marketplace` from /Users/tsujitakayuki/.claude/skills/shirokuma-dev-os.
+Added marketplace `shirokuma-dev-os-marketplace` from ~/.claude/skills/shirokuma-dev-os.
 $ codex plugin add shirokuma-dev-os@shirokuma-dev-os-marketplace
 Added plugin `shirokuma-dev-os` from marketplace `shirokuma-dev-os-marketplace`.
 Installed plugin root: ~/.codex/plugins/cache/shirokuma-dev-os-marketplace/shirokuma-dev-os/1.4.0
