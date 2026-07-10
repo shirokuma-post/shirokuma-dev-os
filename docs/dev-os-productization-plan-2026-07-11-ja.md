@@ -258,7 +258,7 @@ Codex:
 - **strict semver は非強制** (仮説と差分): OpenAI 公式 plugin に `26.709.11516` / `1.0.1000366` 等が実在。semver 準拠は本 repo の自主規律として維持する。
 - **`validate_plugin.py` は存在しない** (仮説と差分): codex npm package 内に validator script は無く、検証は CLI (Rust バイナリ) 内部。構造 validation の実測手段 = `codex plugin marketplace add` → `codex plugin add` の live smoke。
 - **cachebuster の実態** (仮説の「helper script」は不存在): install cache は version-keyed dir (`~/.codex/plugins/cache/<marketplace>/<plugin>/<version>/` へ copy)。local iteration の反映 = version bump か remove → add 再実行。marketplace 手編集は不要 (config.toml には `[marketplaces.*]` / `[plugins."<name>@<marketplace>"]` の登録 entry のみ書かれる)。
-- personal local marketplace (`codex plugin marketplace add <local path>`) は開発用として成立を実測。owner/repo (GitHub) 形式の add は CLI が受け付ける記載だが**未実測**。
+- personal local marketplace (`codex plugin marketplace add <local path>`) は開発用として成立を実測。owner/repo (GitHub) 形式も **2026-07-11 実測 PASS** (`codex plugin marketplace add shirokuma-post/shirokuma-dev-os` → git clone → `plugin add` → installed, enabled 1.4.0)。
 
 live smoke 実測ログ (2026-07-11・要点):
 
@@ -584,7 +584,7 @@ team trial:
 public alpha:
 
 - Claude plugin marketplace申請または公開marketplace
-- Codex向け公開plugin source — dual manifest は成立済 (2026-07-11)。owner/repo (GitHub) 形式の `codex plugin marketplace add` は CLI が受け付ける記載だが未実測 (public alpha 前に実測する)
+- Codex向け公開plugin source — dual manifest 成立済 + owner/repo (GitHub) 形式の `codex plugin marketplace add` も実測 PASS (2026-07-11・installed 1.4.0)。Claude Code 側も GitHub marketplace 経由 update 1.2.2→1.4.0 実測 PASS = **両 platform とも public install 経路が閉じた**
 - release archive、checksum、SBOM相当の内容一覧
 - support範囲とknown limitations
 

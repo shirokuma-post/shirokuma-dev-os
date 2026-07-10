@@ -12,7 +12,7 @@
 - `codex plugin add shirokuma-dev-os@shirokuma-dev-os-marketplace` → install 成功 (cache = `~/.codex/plugins/cache/<marketplace>/<plugin>/1.4.0/`・version-keyed) ✔
 - `codex exec` の skill 一覧に `shirokuma-dev-os:*` 6 skill 露出 (runtime discovery 実証) ✔
 - `codex plugin remove` + `codex plugin marketplace remove` → config.toml が backup と diff 完全一致で復元・`codex doctor` 悪化なし ✔
-- 未実測のまま: owner/repo (GitHub) 形式の marketplace add / 同一 task set での behavior 実走 (§7.4)
+- 未実測のまま: 同一 task set での behavior 実走 (§7.4)。※owner/repo (GitHub) 形式の marketplace add は同日追実測で PASS (Codex install 1.4.0 / Claude Code update 1.2.2→1.4.0)
 
 ### Changed
 - 計画書 (docs/dev-os-productization-plan-2026-07-11-ja.md) の Codex ⚠ blocked 注記を実測結果で解除 (§1.2/1.3/4/4.2/7.1/7.4/8.1/8.3/9)。仮説との差分を明記: `validate_plugin.py` は不存在 (検証は CLI 内部)・strict semver 非強制・marketplace 定義は `.agents/plugins/marketplace.json`・cachebuster = version-keyed cache dir
