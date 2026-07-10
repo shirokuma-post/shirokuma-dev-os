@@ -1,0 +1,36 @@
+{
+  "name": "shirokuma-dev-os",
+  "version": "1.4.0",
+  "description": "開発の普遍原理を束ねた汎用開発OS。思考様式ガード(engineering-doctrine + 配布版 engineering-doctrine-universal)・Intent Anchor(意図の先出し宣言 = 発火装置)・文書運用憲法(doc-constitution)・参謀モードの指揮系統(staff-officer)・マルチセッション運用の型(session-operations)・番人と品質ゲート(guardrails = 失敗カタログ failure-catalog + pre-commit/CI/実行時番犬の雛形) を収録し、新規プロジェクト用の CLAUDE / INVARIANTS / DOC_CONSTITUTION / RETROSPECTIVE テンプレートを同梱する。",
+  "author": {
+    "name": "shirokuma-post",
+    "url": "https://github.com/shirokuma-post"
+  },
+  "license": "MIT",
+  "homepage": "https://github.com/shirokuma-post/shirokuma-dev-os",
+  "repository": "https://github.com/shirokuma-post/shirokuma-dev-os",
+  "keywords": [
+    "engineering-doctrine",
+    "doc-constitution",
+    "staff-officer",
+    "session-operations",
+    "guardrails",
+    "failure-catalog",
+    "intent-anchor",
+    "dev-os",
+    "ai-agent",
+    "governance"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Shirokuma Dev OS",
+    "shortDescription": "開発の普遍原理を束ねた governance skill 集 (6 skills)",
+    "longDescription": "思考様式6規律 (engineering-doctrine / universal 配布版)・文書運用憲法 (doc-constitution)・参謀モード指揮系統 (staff-officer)・マルチセッション運用 (session-operations)・番人と品質ゲート (guardrails) の 6 skill を単一ソースで配給する開発 governance plugin。",
+    "developerName": "shirokuma-post",
+    "category": "Engineering",
+    "capabilities": [
+      "Read"
+    ],
+    "websiteURL": "https://github.com/shirokuma-post/shirokuma-dev-os"
+  }
+}

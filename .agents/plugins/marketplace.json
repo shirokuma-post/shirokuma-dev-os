@@ -1,0 +1,20 @@
+{
+  "name": "shirokuma-dev-os-marketplace",
+  "interface": {
+    "displayName": "Shirokuma Dev OS Marketplace"
+  },
+  "plugins": [
+    {
+      "name": "shirokuma-dev-os",
+      "source": {
+        "source": "local",
+        "path": "./"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Engineering"
+    }
+  ]
+}
