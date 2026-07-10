@@ -108,6 +108,16 @@ shirokuma-dev-os/  (= 2 層を同梱したまま配布)
 
 インストール後、各スキル (engineering-doctrine 等) が Claude Code に登録され、判断時に自動発火する。
 
+### A'. Codex にインストール (v1.4.0〜・実測済)
+
+```bash
+# terminal で (codex-cli 0.144.1 以降)
+codex plugin marketplace add shirokuma-post/shirokuma-dev-os
+codex plugin add shirokuma-dev-os@shirokuma-dev-os-marketplace
+```
+
+skill 本体は Claude Code と共通の 1 ソース (`skills/`) — 両 platform で同じ 6 skill が discovery される (2026-07-11 live 実測)。外す時は `codex plugin remove shirokuma-dev-os@shirokuma-dev-os-marketplace` → `codex plugin marketplace remove shirokuma-dev-os-marketplace`。
+
 > ⚠️ **git clone を `~/.claude/skills/` に置くだけでは skill は登録されない。**
 > 個人 skill として発見されるのは `~/.claude/skills/<skill名>/SKILL.md` の 1 階層構造のみで、
 > 本 repo は skill を `skills/` 配下に入れ子で持つ **plugin 形式**。skill を発火させる導入は上の plugin install。
