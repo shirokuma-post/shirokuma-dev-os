@@ -8,6 +8,7 @@
  * - 内部リンク drift (相対 path / [[name]] 形式) の破断検出
  * - plugin.json の keywords と skills/ ディレクトリ名の対応
  * - templates/ 内 placeholder ({{xxx}}) の整合性
+ * - skill 言及の semantic consistency (全 skill 名が GOVERNANCE.md / scripts/init.mjs / README.md に登場するか)
  *
  * Exit code:
  *   0 = 全項目 PASS
@@ -272,6 +273,44 @@ async function checkDoctrineLayers() {
   }
 }
 
+/* ─── 7. skill 言及の semantic consistency (= 新 skill 追加時の言及漏れ drift 検出) ─── */
+async function checkSkillMentionConsistency() {
+  const skillsDir = path.join(ROOT, 'skills');
+  if (!(await exists(skillsDir))) {
+    fail('skill-mentions', `${skillsDir} が存在しない`);
+    return;
+  }
+  const skillDirs = (await fs.readdir(skillsDir, { withFileTypes: true }))
+    .filter((d) => d.isDirectory())
+    .map((d) => d.name);
+
+  // 全 skill 名が言及されるべきファイル (= 追加したら他にも増やせる)
+  const mentionTargets = ['GOVERNANCE.md', 'scripts/init.mjs', 'README.md'];
+
+  for (const rel of mentionTargets) {
+    const p = path.join(ROOT, rel);
+    if (!(await exists(p))) {
+      fail('skill-mentions', `${rel} が存在しない (= skill 言及チェック不能)`);
+      continue;
+    }
+    const content = await readText(p);
+    const missing = skillDirs.filter((name) => {
+      // 単純 includes だと "engineering-doctrine" が "engineering-doctrine-universal" の
+      // 部分文字列として誤 PASS するため、skill 名の前後が [\w-] でないことを要求する
+      const esc = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      return !new RegExp(`(?<![\\w-])${esc}(?![\\w-])`).test(content);
+    });
+    if (missing.length > 0) {
+      fail(
+        'skill-mentions',
+        `${rel} に skill 言及漏れ: ${missing.join(', ')} (= 新 skill 追加時の semantic drift)`,
+      );
+    } else {
+      pass('skill-mentions', `${rel} に全 ${skillDirs.length} skill の言及あり`);
+    }
+  }
+}
+
 /* ─── 実行 ─── */
 async function main() {
   console.log('\n🔍 shirokuma-dev-os 自己整合性 audit\n');
@@ -282,6 +321,7 @@ async function main() {
   await checkInternalLinks();
   await checkTemplatePlaceholders();
   await checkDoctrineLayers();
+  await checkSkillMentionConsistency();
 
   console.log(`✅ PASS: ${passes.length}`);
   for (const p of passes) console.log(`  - [${p.check}] ${p.msg}`);

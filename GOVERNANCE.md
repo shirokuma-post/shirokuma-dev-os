@@ -9,8 +9,9 @@
 > **配布形態（v1.2 で確定）**: 本 repo は **2 層を同梱したまま配布する**。
 > - **第 1 層** = `engineering-doctrine`。作者の n=1 経験則を固有名だけ剥いて**濃いまま**保持する層
 >   （技術スタック前提・実戦の具体例を含む）。外部読者には「規律がどんな失敗から生まれたか」を示す**実例集**として価値がある。
-> - **第 2 層（発火推奨セット）** = `engineering-doctrine-universal` + `doc-constitution` + `staff-officer` + `session-operations`。
+> - **第 2 層（発火推奨セット）** = `engineering-doctrine-universal` + `doc-constitution` + `staff-officer` + `session-operations` + `guardrails`。
 >   固有名・スタック前提を剥いた普遍核。**外部プロジェクトで実際に発火させるのはこちら**。
+>   （`guardrails` = 番人と品質ゲート。失敗カタログ + CI/番人雛形で「番人を緩めない」を実装として配給する層）
 > 迷ったら: 読み物としては両層、運用に組み込むのは第 2 層 + templates。
 
 ---
@@ -41,6 +42,7 @@
 | 文書運用ルール（7条 + Tier 読み分け） | **親**: `skills/doc-constitution` |
 | 参謀フロー（5層 × 4ライン・検品・ゲート・振り返り） | **親**: `skills/staff-officer`（振り返り 5 軸の雛形 = `templates/RETROSPECTIVE.template.md`） |
 | マルチセッション運用（1ドメイン1セッション/起動/撤退/handoff） | **親**: `skills/session-operations` |
+| 番人と品質ゲート（失敗カタログ + CI/番人雛形） | **親**: `skills/guardrails` |
 | 不変ルールの普遍部（セキュリティ核/性能核/…） | **親**: `templates/INVARIANTS.template.md` |
 | プロジェクトの北極星・指揮系統の骨 | **親**: `templates/CLAUDE.template.md` |
 | 製品名・project ID・URL・team・鍵名 | **子**: 各プロジェクトの `CLAUDE.md` / `INVARIANTS.md` |
