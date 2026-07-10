@@ -1,0 +1,51 @@
+# CI ゲート（層2）。コピー先: .github/workflows/guardrails.yml
+# 失敗クラス: A1秘密 / A6越境import / B2,B7禁止パターン / J型 / I4本番ビルド / K4越境
+# 原則: push/PR で「必ず止まる」。tsc 緑だけをデプロイ根拠にしない（本番ビルド job を含める）。
+
+name: guardrails
+on:
+  push: { branches: ["**"] }
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  secret-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@{{commit-sha}}   # Actions は SHA pin 推奨（供給網対策）
+        with: { fetch-depth: 0 }                # gitleaks は履歴全体を見る
+      - name: gitleaks
+        uses: gitleaks/gitleaks-action@{{commit-sha}}
+        env: { GITLEAKS_CONFIG: .gitleaks.toml }
+
+  forbidden-patterns:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@{{commit-sha}}
+      - name: 禁止パターン番人（越境/特権/型逃げ）
+        run: bash checks/forbidden-patterns.sh
+
+  typecheck-lint-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@{{commit-sha}}
+      - uses: actions/setup-node@{{commit-sha}}
+        with: { node-version: "{{20}}", cache: "npm" }
+      - run: npm ci
+      - name: typecheck（型エラー0）
+        run: npm run typecheck        # tsc --noEmit
+      - name: lint（error 0）
+        run: npm run lint
+      - name: any ラチェット（増えたら fail）
+        run: bash checks/any-ratchet.sh
+      - name: 本番ビルド（tsc 緑だけを根拠にしない）
+        run: npm run build            # フレームワークの本番ビルド = I4 対策
+
+  # DB を持つなら定期 job で監査 SQL を回す（pull_request では不要）
+  # db-audit:
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - run: psql "$DB_URL" -f checks/rls_disabled_tables.sql -v ON_ERROR_STOP=1
+  #     - run: psql "$DB_URL" -f checks/tenant_column_invariant.sql -v ON_ERROR_STOP=1

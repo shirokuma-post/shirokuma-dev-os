@@ -41,7 +41,8 @@ shirokuma-dev-os/
 │   ├── engineering-doctrine-universal/ ← 思考様式 6 規律 + Intent Anchor (配布版・蒸留)
 │   ├── doc-constitution/               ← 文書運用憲法 (7条 + Tier)
 │   ├── staff-officer/                  ← 参謀フロー (5 層 × 4 ライン + 振り返り)
-│   └── session-operations/             ← マルチセッション運用の型
+│   ├── session-operations/             ← マルチセッション運用の型
+│   └── guardrails/                     ← 番人と品質ゲート (失敗カタログ + CI/番人雛形)
 ├── templates/
 │   ├── CLAUDE.template.md              ← 新規プロジェクト用テンプレ (Intent Anchor 同梱)
 │   ├── INVARIANTS.template.md

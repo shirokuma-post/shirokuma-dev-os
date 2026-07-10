@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.3.0] - 2026-07-11
+
+### Added
+- **skills/guardrails** — 番人（番犬）と品質ゲートの型を port（source = shirokuma_SaaS hub repo `skills/shirokuma-dev-os/guardrails/` の snapshot・本文無変更 port）。収録:
+  - `SKILL.md`（中核思想「1失敗クラス = 1番人」+ 5層の防御線: pre-commit / CI ゲート / デプロイ前 / 実行時番犬 / 多層防御）+ `VALIDATION.md`（実機検証ログ）
+  - `references/` 7 本（failure-catalog = 失敗クラス→恒久対策の正典 / launch-readiness / type-safety-ratchet / supply-chain-and-sast / observability-slo / resilience-and-delivery / maturity-roadmap）
+  - `scripts/` 実装雛形 17 本（gitleaks / lefthook / CI workflow / 禁止パターン grep / any ラチェット / RLS・テナント越境 SQL / maxDuration・依存ドリフト・死活スモーク / dependabot / SAST・DAST / semgrep ルール / SLO 定義 / restore-drill）
+- plugin.json: keywords に `guardrails` / `failure-catalog` 追加・description に guardrails を反映
+
+### Changed
+- port 時の変更は旧 skill 名参照の追従 2 箇所のみ（`staff-mode` → `staff-officer`: SKILL.md 関連節 / VALIDATION.md 未検証節）。checklist・判定ロジック・references 本文は 1 byte も変更なし（md5 一致で確認）
+
 ## [1.2.2] - 2026-07-08
 
 ### Fixed

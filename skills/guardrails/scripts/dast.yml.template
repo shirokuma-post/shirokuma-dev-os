@@ -1,0 +1,25 @@
+# DAST: 起動中アプリへの受動スキャン（ZAP baseline）。コピー先: .github/workflows/dast.yml
+# SAST(静的)の穴を埋める。preview URL に撃つ。失敗カタログ D(XSS)/E(公開endpoint)/K(open redirect) の実挙動を拾う。
+# baseline は受動中心で誤検出少なめ。認証付きフルスキャン/ファジングは maturity-roadmap の Later。
+name: dast
+on:
+  # preview デプロイ完了後に手動 or workflow_run でトリガー
+  workflow_dispatch:
+    inputs:
+      target_url: { description: "スキャン対象(preview URL)", required: true }
+
+permissions:
+  contents: read
+  issues: write     # 検出結果を issue 化する場合
+
+jobs:
+  zap-baseline:
+    runs-on: ubuntu-latest
+    steps:
+      - name: ZAP Baseline Scan
+        uses: zaproxy/action-baseline@{{commit-sha}}
+        with:
+          target: ${{ inputs.target_url }}
+          # 既知の許容項目は .zap/rules.tsv で抑制（crying wolf 回避）
+          rules_file_name: "{{.zap/rules.tsv}}"
+          fail_action: true     # 新規 High/Medium で fail

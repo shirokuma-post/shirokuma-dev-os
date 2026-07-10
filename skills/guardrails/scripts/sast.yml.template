@@ -1,0 +1,36 @@
+# SAST: CodeQL + Semgrep。コピー先: .github/workflows/sast.yml
+# PR差分に走らせて新規findingをブロック（既存はbaseline管理）。失敗カタログをAST/データフローで検出。
+name: sast
+on:
+  pull_request:
+  push: { branches: ["{{main}}"] }
+
+permissions:
+  contents: read
+  security-events: write   # CodeQL の結果アップロードに必要（最小限）
+
+jobs:
+  codeql:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@{{commit-sha}}
+      - uses: github/codeql-action/init@{{commit-sha}}
+        with: { languages: "javascript-typescript" }
+      - uses: github/codeql-action/analyze@{{commit-sha}}
+
+  semgrep:
+    runs-on: ubuntu-latest
+    container: { image: "semgrep/semgrep:{{pinned-tag}}" }
+    steps:
+      - uses: actions/checkout@{{commit-sha}}
+      # 自前ルール（失敗カタログのAST化）＋公開rulesetを併用
+      - run: semgrep --error --config checks/semgrep-rules.yml.template --config "p/owasp-top-ten" --config "p/typescript"
+
+  npm-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@{{commit-sha}}
+      - uses: actions/setup-node@{{commit-sha}}
+        with: { node-version: "{{20}}", cache: "npm" }
+      - run: npm ci
+      - run: npm audit --audit-level=high   # 高/重大の既知脆弱性で fail

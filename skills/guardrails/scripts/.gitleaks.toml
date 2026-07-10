@@ -1,0 +1,37 @@
+# gitleaks v8 設定 — 秘密スキャン（失敗クラス A1）
+# 検証: gitleaks detect --config .gitleaks.toml --source .
+# pre-commit: gitleaks protect --staged --redact --config .gitleaks.toml
+
+title = "{{プロジェクト名}} secret scan"
+
+# 既定 ruleset を継承（generic-api-key, jwt, aws-key, private-key 等）
+[extend]
+useDefault = true
+
+# --- プロジェクト固有の secret 形式を追加 ---
+[[rules]]
+id = "project-encryption-secret"
+description = "暗号化シークレット/最高権限キーの形式"
+# 例: 64hex の暗号鍵、サービスロールJWT等。自プロジェクトの鍵形式に置換
+regex = '''(?i)(service_role|encryption_secret|local_token_secret)\s*[:=]\s*['\"]?[A-Za-z0-9_\-\.]{32,}'''
+tags = ["key", "project"]
+
+[[rules]]
+id = "private-ip-db-url"
+description = "別系統DB/接続先のハードコード（K4越境の芽）"
+regex = '''(?i)postgres(ql)?://[^\s'\"]+'''
+tags = ["url", "boundary"]
+
+# --- 誤検出除外（placeholder / example はスキャン対象外）---
+[allowlist]
+description = "プレースホルダと例ファイル"
+paths = [
+  '''\.env\.example$''',
+  '''(^|/)(fixtures|__mocks__|examples)/''',
+  '''(^|/)(README|.*\.template)\.md$''',
+]
+regexes = [
+  '''\{\{.*\}\}''',            # {{placeholder}}
+  '''(?i)your[-_]?(api[-_]?)?key[-_]?here''',
+  '''(?i)example|dummy|sample|changeme''',
+]

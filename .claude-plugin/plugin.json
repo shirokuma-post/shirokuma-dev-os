@@ -1,7 +1,7 @@
 {
   "name": "shirokuma-dev-os",
-  "version": "1.2.2",
-  "description": "開発の普遍原理を束ねた汎用開発OS。思考様式ガード(engineering-doctrine + 配布版 engineering-doctrine-universal)・Intent Anchor(意図の先出し宣言 = 発火装置)・文書運用憲法(doc-constitution)・参謀モードの指揮系統(staff-officer)・マルチセッション運用の型(session-operations) を収録し、新規プロジェクト用の CLAUDE / INVARIANTS / DOC_CONSTITUTION / RETROSPECTIVE テンプレートを同梱する。2 層継承構造 (専用層 + 発火推奨セット) で、固有名を剥いた『骨』だけを下流へ配給。自己整合性 audit script + 初期化 CLI 同梱。",
+  "version": "1.3.0",
+  "description": "開発の普遍原理を束ねた汎用開発OS。思考様式ガード(engineering-doctrine + 配布版 engineering-doctrine-universal)・Intent Anchor(意図の先出し宣言 = 発火装置)・文書運用憲法(doc-constitution)・参謀モードの指揮系統(staff-officer)・マルチセッション運用の型(session-operations)・番人と品質ゲート(guardrails = 失敗カタログ failure-catalog + pre-commit/CI/実行時番犬の雛形) を収録し、新規プロジェクト用の CLAUDE / INVARIANTS / DOC_CONSTITUTION / RETROSPECTIVE テンプレートを同梱する。2 層継承構造 (専用層 + 発火推奨セット) で、固有名を剥いた『骨』だけを下流へ配給。自己整合性 audit script + 初期化 CLI 同梱。",
   "author": {
     "name": "shirokuma-post",
     "url": "https://github.com/shirokuma-post"
@@ -21,6 +21,8 @@
     "ai-agent",
     "dev-os",
     "session-operations",
-    "intent-anchor"
+    "intent-anchor",
+    "guardrails",
+    "failure-catalog"
   ]
 }
