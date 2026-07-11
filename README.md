@@ -135,10 +135,15 @@ skill 本体は Claude Code と共通の 1 ソース (`skills/`) — 両 platfor
 # CLI で 3 ファイル (CLAUDE.md / INVARIANTS.md / DOC_CONSTITUTION.md) を一括生成
 cd shirokuma-dev-os   # clone した repo (置き場所は任意)
 mkdir -p ~/projects/my-saas   # 展開先は既存ディレクトリであること (誤 path への生成防止)
-node scripts/init.mjs ~/projects/my-saas --name=my-saas
+node scripts/init.mjs ~/projects/my-saas --name=my-saas                    # 展開先の stack を観測して推奨 pack を根拠付き表示・採用
+node scripts/init.mjs ~/projects/my-cli --name=my-cli --preset=minimal     # universal のみ (CLI/ライブラリ向け・最小 placeholder)
+node scripts/init.mjs ~/projects/my-saas --name=my-saas --preset=saas      # typescript + nextjs + supabase-postgres 全部入り
+node scripts/init.mjs ~/projects/my-saas --name=my-saas --dry-run          # 書き込まず生成予定 file と placeholder 残数だけ表示
 ```
 
-実行後、生成された各ファイルの `{{...}}` placeholder を埋めればプロジェクト固有層が完成。
+`--packs=typescript,nextjs` で pack 個別指定も可。INVARIANTS.md は選択 pack の `invariants.fragment.md` が節番号対応で自動合成される。既存 file は default で skip・`--force` 時は `.bak-<日時>` に backup してから上書き。
+
+実行後、残った `{{...}}` placeholder が file 別に一覧表示される — **これを埋めて初めてプロジェクト固有層が完成** (init は placeholder が残る限り「完了」と表示しない)。
 `RETROSPECTIVE.template.md` は init 対象外 — 大きめのタスク完遂ごとに手でコピーして 5 軸を埋める (→ `staff-officer` Phase 5)。
 
 ### C. 開発に "思想" を組み込みたい (= プラグイン使わず参考にする)
