@@ -785,14 +785,14 @@ Public Alphaまで追加しない:
 
 ### 次の縦切り
 
-1. **marketplace.json・GOVERNANCE への guardrails 反映 + live install E2E** — marketplace.json description に guardrails 未言及・GOVERNANCE の 2 層継承分類に guardrails 未記載 (2026-07-11 実測)。反映後、guardrails 込み 6 skill の `/plugin install` → discovery → invoke を live で再実測 (= §9 Phase 1 gate の Claude 側条件クローズ)。
-2. **trigger eval 整備 (§7.2)** — 現状 0 件。6 skill × positive / negative / overlap の最低 80 ケースを作り、precision / recall KPI を初計測する (= Phase 2 の入口)。
+> **2026-07-11 第 2 改訂で大半 superseded** — 旧 1 の GOVERNANCE 反映 = bfbb246 済 / 旧 2 の trigger eval 整備 = 20216bf 済 (80 case + harness・実走は auth 待ち) / 旧非scope だった pack 分離 = 981ac1d 済・skill 本文 (staff-officer routing) = 344c5b1 済。最新の残作業一覧は **§14.3** が正典。
+
+1. **marketplace.json description への guardrails 反映** — 今も未言及 (2026-07-11 検品実測)。
+2. **eval 実走** — `claude /login` 後に pilot 15 → フル 80 で precision / recall KPI を初計測 (= Phase 2 の入口)。
 
 非scope (変わらず):
 
-- skill本文の思想変更
 - agent実装 (§6 W8)
-- stack pack分離 (§5 W4)
 - marketplace公開
 - Codex 側の同一 task set behavior 実走 (§7.4) — 梱包 + install/discovery smoke は 2026-07-11 達成済のため blocked 解除、実走のみ 1.7.x へ
 
