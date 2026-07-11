@@ -1,0 +1,61 @@
+{
+  "name": "universal",
+  "description": "stack 非依存の番人 core — 秘密スキャン・禁止パターン関門・死活スモーク・SLO 定義・DAST。どのプロジェクト (CLI/ライブラリ/web) でも適用可能な骨格。ただし一部 check は公開 HTTP endpoint を持つ場合のみ意味を持つ (各 applies 参照)。",
+  "applies_when": "常時 (git repo であれば適用可)。smoke / slo / dast の 3 check のみ「公開 HTTP endpoint を持つサービス」が前提で、CLI/ライブラリ開発では省く。",
+  "checks": [
+    {
+      "id": "gitleaks-secret-scan",
+      "file": ".gitleaks.toml",
+      "scope": "git 履歴全体 + staged diff (全ファイル種別)",
+      "severity": "block",
+      "evidence": "gitleaks 既定 ruleset (generic-api-key/jwt/aws-key/private-key 等) + プロジェクト固有 regex 2 件 (特権鍵形式 / DB 接続 URL hardcode)。CI の gitleaks-action が検出で fail する",
+      "remediation": "秘密を履歴から除去 (filter-repo 等) し鍵を rotate。placeholder/example は allowlist で除外",
+      "limitations": "regex ベース = 未知形式の秘密は素通り。gitleaks binary の導入が別途必要。固有 rule 2 件は例示であり自プロジェクトの鍵形式への置換が前提 (置換しないと固有形式は検出されない)"
+    },
+    {
+      "id": "lefthook-pre-commit",
+      "file": "lefthook.yml.template",
+      "scope": "staged diff (pre-commit 時)",
+      "severity": "warn",
+      "evidence": "gitleaks protect --staged + forbidden-patterns.sh --staged を commit 前に実行。設計上ローカルは警告層 (gitleaks 未導入なら警告して通す・forbidden-patterns は `|| true` で非ブロック)",
+      "remediation": "lefthook install + gitleaks 導入。止める役目は CI 層 (層2) が持つ",
+      "limitations": "ローカル hook は LEFTHOOK=0 で bypass 可能・未 install なら発火しない。単独では防御にならず CI との多層前提 (これは設計意図であり欠陥ではない)"
+    },
+    {
+      "id": "forbidden-patterns",
+      "file": "forbidden-patterns.sh",
+      "scope": "git 管理下の *.ts/*.tsx/*.js/*.jsx/*.sql (node_modules/migrations_archive/_archive 除外)",
+      "severity": "block",
+      "evidence": "grep 正規表現 (コメント行/型定義/テスト除外付き)。ERROR 分類 = A6 特権クライアント越境 / K4 他コンポーネント直 fetch / B7 USING(TRUE) / J1 @ts-ignore で exit 1。WARN 分類 = A4 secret-in-log / J1b eslint-disable / B2 body.userId は報告のみ (誤検出が多いと実測済のため)",
+      "remediation": "failure-catalog.md の該当クラスを根治 (逃げ禁止)。精密判定は typescript pack の semgrep-rules.yml.template を併用",
+      "limitations": "文字列一致の第一関門 = 変数経由・別名 import・動的構築は取りこぼす。対象拡張子と既定 pattern が TS/JS/SQL + Supabase/Vercel 語彙前提 ({{ }} 置換で他 stack に転用可能だが、拡張子リストは script 内 hardcode)。厳密な意味で言語非依存ではなく「置換可能な汎用関門」"
+    },
+    {
+      "id": "smoke-health",
+      "file": "smoke.mjs",
+      "scope": "TARGETS に列挙した全コンポーネントの /health endpoint (本番 live)",
+      "severity": "block",
+      "evidence": "health 出力契約の top-level status 3 値 (healthy/degraded/unhealthy) + EXPECT_VERSION 指定時は version(commit sha) 照合。unhealthy 1 件で exit 1",
+      "remediation": "unhealthy コンポーネントの復旧。version stale はデプロイ経路 (identity 整合/Production Branch) を実測確認",
+      "limitations": "実行に Node 18+ が必要 (global fetch / AbortSignal.timeout)。TARGETS は手書きリスト = 新コンポーネントの追加漏れは検出不能。異常時通知はコメントで示唆のみで未実装。degraded は 🟡 表示だが exit 0 (block しない)"
+    },
+    {
+      "id": "slo-definition",
+      "file": "slo.template.yml",
+      "scope": "HTTP サービスの availability / latency SLI (30d ローリング窓)",
+      "severity": "warn",
+      "evidence": "status_code / latency ベースの SLI 定義 + burn rate 多段 alert (14.4x/1h page 〜 3x/24h ticket)。この file 自体は定義のみで何も enforce しない",
+      "remediation": "SLO ツール (Datadog/Grafana/Sloth 等) に変換して配線し、alert の通知先を運営最上位管理者のみに絞る",
+      "limitations": "メトリクス収集基盤が別途必要 (file 単体では何も測れない)。HTTP リクエスト型サービス前提 = バッチ/CLI には別の SLI 設計が要る"
+    },
+    {
+      "id": "dast-zap-baseline",
+      "file": "dast.yml.template",
+      "scope": "起動中の preview URL への受動スキャン (ZAP baseline)",
+      "severity": "block",
+      "evidence": "OWASP ZAP baseline scan。新規 High/Medium 検出で fail_action: true により fail",
+      "remediation": "検出項目の根治。既知の許容項目は .zap/rules.tsv で抑制 (crying wolf 回避)",
+      "limitations": "受動スキャン中心 = 認証後領域・能動的攻撃 (ファジング等) は対象外 (maturity-roadmap の Later)。GitHub Actions 前提。公開 HTTP endpoint がないプロジェクトには適用外。トリガーは手動 workflow_dispatch = 自動配線は別途"
+    }
+  ]
+}

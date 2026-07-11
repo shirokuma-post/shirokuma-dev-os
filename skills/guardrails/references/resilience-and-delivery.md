@@ -8,7 +8,7 @@
 **A1. テストしていないバックアップは「バックアップではない」**
 - 失敗: 自動バックアップが有効でも、いざ復元したら壊れている/手順を誰も知らない/RTO が想定外に長い。
 - 恒久: **復元演習(restore drill)を定期実施**。別環境へ実際に復元し、データ整合と所要時間(RTO)を計測。PITR(point-in-time recovery)が使えるか実機確認。
-- 番人: ◯ 四半期ごとの復元演習をカレンダー化（`scripts/restore-drill.md.template`）。「最後に復元成功した日」を記録。
+- 番人: ◯ 四半期ごとの復元演習をカレンダー化（`assets/packs/supabase-postgres/restore-drill.md.template`）。「最後に復元成功した日」を記録。
 
 **A2. 破壊的な1段移行（expand-contract を使わない）**
 - 失敗: `DROP COLUMN`/`RENAME`/型変更を1回の migration＋デプロイで実行 → 旧コードが動いている瞬間に壊れる/ロールバック不能。
@@ -38,7 +38,7 @@
 
 ## C. DAST（動いているアプリを外から叩く・SASTの穴を埋める）
 - SAST は静的、DAST は**起動中のアプリ**に攻撃リクエストを撃つ。公開LP/フォーム/認証フローの実挙動の穴（ヘッダ欠落・反射型XSS・open redirect）を拾う。
-- 軽量: **ZAP baseline scan** を preview URL に対して CI で（受動スキャン中心で誤検出少なめ）。`scripts/dast.yml.template`。
+- 軽量: **ZAP baseline scan** を preview URL に対して CI で（受動スキャン中心で誤検出少なめ）。`assets/packs/universal/dast.yml.template`。
 - （成熟段階）認証付きフルスキャン・ファジング（入力の異常系大量投入）は Later。
 
 ## D. SBOM & 供給網の来歴（インシデント時に遡れる）

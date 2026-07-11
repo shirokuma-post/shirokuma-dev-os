@@ -5,6 +5,7 @@
 > 絶対に守るルール。スキル `staff-officer` のセキュリティゲートは、この文書をチェックリストとして使う。
 > **削除・簡略化禁止。** 仕様が進化したら、同じ変更でこの文書も直す（→ `doc-constitution` 2条）。
 > 見出しと普遍原則は固定。`{{}}` は使う技術・構成に合わせて埋める。使わない節は丸ごと削ってよい。
+> **stack 固有の不変条件**（web/OAuth/RLS/npm 等）はこの文書には書かず、guardrails の `assets/packs/<pack>/invariants.fragment.md` が節番号対応で供給する。使う stack の断片を該当節の表末尾へ合成する。
 
 ---
 
@@ -14,35 +15,16 @@
 |---|---|
 | **特権鍵は集約点の内側だけ** | {{例: service role key / 管理者 API キー}} は {{集約点（例: Gateway / BFF）}} 内のみ。他コンポーネントは持たない。CI ガードで再導入を禁止 |
 | **暗号鍵は1箇所に集約** | {{例: ENCRYPTION_SECRET}} は集約点のみ。外部 API 鍵の復号経路はそこに寄せる |
-| **トークン/OAuth state はコンポーネント独立の鍵で** | 流出時の被害を局所化する。共有鍵で全体を保護しない |
-| **API キー等の機微情報は AES-256-GCM で暗号化** | 暗号化は単一の `encrypt()` を必ず通す。生保存禁止 |
 | **パスワード代行禁止** | AI / 自動化がユーザーの password を入力しない |
 | **prompt injection 対策** | AI 呼び出しは boundary tag でラップし、外部入力を命令と解釈させない |
-| **OAuth state 有効期限は十分に** | 短すぎると同意画面操作中に期限切れ（例: 15分） |
-| **(env 投入時) 末尾改行を混入させない** | {{例: Vercel}} で `printf '%s'`（`'%s\n'` 禁止）。改行混入は HMAC 鍵 mismatch → 署名検証が永久失敗 |
 
 ## 2. 性能核
 
-| ルール | 詳細 |
-|---|---|
-| **middleware で重い認証呼び出しをしない** | {{例: getUser()/getSession()}} を毎リクエスト呼ばない。cookie pass-through に留める |
-| **client-side polling は短くしすぎない** | 例: 60秒以下禁止。focus 復帰時 + イベント発火時のみに寄せる |
-| **(RLS) 権限式は実行計画でキャッシュされる形に** | {{例: auth.uid() は (SELECT auth.uid()) で initplan 化}} |
-| **1 テーブル × 1 role × 1 cmd で 1 ポリシー** | 重複ポリシーを避ける（評価コスト増） |
-| **owner 権限ポリシーは認証済みロール限定** | `TO public` 禁止、`TO authenticated` 等に絞る |
-| **1 リクエストの DB クエリ数が多いと設計レビュー** | 例: 4個以上は N+1 を疑う |
-| **cron/worker の副作用 UPDATE はスロットル** | dispatch 毎の無条件 UPDATE 禁止。{{例: Redis スロットル}} |
-| **頻出 WHERE には index** | {{例: partial index / CREATE INDEX CONCURRENTLY}} |
+> この節の具体則は stack 固有（web クライアント / DB）→ `nextjs` / `supabase-postgres` pack の `invariants.fragment.md` §2 を合成する。stack 非依存の性能則が生まれたらここに表で追記。
 
 ## 3. DB アクセス
 
-| ルール | 詳細 |
-|---|---|
-| **(マルチスキーマ) スキーマを必ず明示** | {{例: .schema('xxx')}}。忘れると別スキーマを参照して空振り |
-| **migration は集約ディレクトリに記録** | DB 直接 DDL 後も追記。正典 = {{migrations ディレクトリ}} |
-| **共有テーブルを優先、個別新設は抑制** | 新規モジュールは {{共有テーブル}} を使う。安易な個別テーブル新設禁止 |
-| **固有カラムは命名規約で衝突回避** | {{例: {module}_xxx 形式}} |
-| **廃止モジュールのスキーマを安易に DROP しない** | {{例: PostgREST schema cache 連鎖障害}}。空でも CREATE 状態維持 |
+> DB を使う場合のみ → `supabase-postgres` pack の `invariants.fragment.md` §3 を合成する。
 
 ## 4. デプロイ運用
 
@@ -57,10 +39,9 @@
 
 | ルール | 詳細 |
 |---|---|
-| **外部 HTML/リッチ入力はサニタイズ** | {{例: DOMPurify}} を必ず通す |
-| **重い import ライブラリは遅延読み込み** | top-level import がビルドを壊す場合は遅延 require |
-| **Webhook は署名検証必須** | {{例: Stripe / Discord / Meta}}。署名なしの着信を信用しない |
 | **コンポーネント間連携は署名付き** | {{例: HMAC 署名}}。内部だからと無検証にしない |
+
+> web 入力（HTML サニタイズ / Webhook 署名）は `nextjs` pack、ビルド系（遅延 import）は `typescript` pack の `invariants.fragment.md` §5 を合成する。
 
 ## 6. 依存管理（→ `engineering-doctrine` 規律6）
 
