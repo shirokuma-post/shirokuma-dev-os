@@ -1,6 +1,6 @@
 ---
 name: engineering-doctrine-universal
-description: 開発の思考様式ガード (配布版・第 2 層)。engineering-doctrine の普遍核のみを蒸留し、特定スタック (TS/Supabase/Next.js 等) や特定経験則を完全に剥いた汎用版。「逃げない・根源・実測・幹・やり切る・固定」の 6 規律を業界用語で再表現。AI agent 経由の開発全般 (Claude Code / Cursor / Copilot / Aider 等) で適用可能。
+description: 開発の思考様式ガード (配布版・第 2 層)。特定スタックを前提としない汎用版で、どのプロジェクト・どの言語 (Python/Rust/Go 等) の実装・修正・デバッグ・設計判断・レビューでもこちらが発火する。特に「原因不明のまま except/catch 握りつぶしや retry で逃げかけている」「実装方針に妥協・先送りが混ざっていないかレビューしたい」「推測で権限・設定を判定しそう」な瞬間に発動。engineering-doctrine の普遍核のみを蒸留し、特定スタック (TS/Supabase/Next.js 等) や特定経験則を完全に剥いた「逃げない・根源・実測・幹・やり切る・固定」の 6 規律。AI agent 経由の開発全般 (Claude Code / Cursor / Copilot / Aider 等) で適用可能。
 ---
 
 # engineering-doctrine-universal — 配布版・開発の思考様式ガード

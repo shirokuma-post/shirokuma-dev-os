@@ -22,6 +22,8 @@
  * flags:
  *   --sample N       category 比率 (positive .60 / negative .25 / overlap 残り) で N 件抽出。
  *                    positive 内は skill round-robin で全 skill をカバー
+ *   --ids a,b,c      指定 id のみ強制再実行 (--sample/--resume より優先・skip しない)。
+ *                    集計は既存仕様どおり同一 id の最新 entry 後勝ち = 再計測用
  *   --resume         results.jsonl に既にある id を skip
  *   --calibrate [id] 1 case だけ実行し raw stream-json を全 dump (results へは書かない)
  *   --report         API を呼ばず集計だけ表示
@@ -59,6 +61,7 @@ const val = (f, d) => {
 };
 const OPT = {
   sample: val("--sample", null),
+  ids: val("--ids", null),
   resume: has("--resume"),
   calibrate: has("--calibrate"),
   calibrateId: has("--calibrate") ? val("--calibrate", null) : null,
@@ -323,7 +326,14 @@ if (OPT.calibrate) {
 }
 
 let queue = OPT.sample ? sampleCases(allCases, Number(OPT.sample)) : [...allCases];
-if (OPT.resume) {
+if (OPT.ids) {
+  // 指定 id のみ強制再実行 (--resume の skip 対象外)。集計は最新 entry 後勝ち (既存仕様)
+  const want = OPT.ids.split(",").map((s) => s.trim()).filter(Boolean);
+  const missing = want.filter((id) => !allCases.some((c) => c.id === id));
+  if (missing.length) throw new Error(`case not found in cases.jsonl: ${missing.join(", ")}`);
+  queue = want.map((id) => allCases.find((c) => c.id === id));
+}
+if (OPT.resume && !OPT.ids) {
   // 同一 id の最新 entry を採用し、計測有効 (completed/truncated) なら skip = 再実行 (API call) しない
   const latest = new Map();
   for (const r of readJsonl(OPT.results)) latest.set(r.id, r);
