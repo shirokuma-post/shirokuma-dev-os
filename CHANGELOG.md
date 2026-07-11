@@ -1,5 +1,26 @@
 # Changelog
 
+## [1.5.1] - 2026-07-11
+
+trigger eval の初 live 実測 (`claude /login` 後) と、その結果に基づく description tuning。
+
+### Measured (dev-os 初の発火実測)
+- pilot 15 case を live 実行 (較正 1 call で Skill tool_use 検出を実証)。`--max-turns` 打ち切りは trigger 計測有効として集計に含める修正 (286afb9)
+- **初 KPI (tuning 前)**: universal R0.00 / engineering-doctrine P0.67 / staff-officer P0.50 / doc-constitution R0.50 / guardrails・session-operations 1.00・negative 誤発火 0/4・3+ 同時発火 0
+
+### Changed
+- **trigger description tuning** (a0c7efc) — 4 skill の frontmatter description のみ調整 (本文・case 不変):
+  - engineering-doctrine = 「作者専用層 (TS/Supabase/Next.js)・非 TS/外部プロジェクトは universal を使う」negative 明示
+  - engineering-doctrine-universal = 非 TS (Python/Rust/Go 等) の具体 trigger 強化
+  - doc-constitution = 正典裁定・CI/実装変更に伴う文書更新の複合依頼 trigger 補強
+  - staff-officer = 「複数動詞でも 1 責務 + 付随文書化で専門 skill 領分に収まる依頼は不発火」negative 追加
+- harness に `--ids=a,b,c` (指定 case 強制再実行)
+
+### Result (同一 15 case 再計測・盛らない)
+- **単独 positive case は 6 skill 全て P/R = 1.00** (universal R0.00→1.00・engineering-doctrine P0.67→1.00・staff-officer P0.50→1.00 が改善)
+- **overlap (複合依頼) は据え置き**: doc-constitution R0.50・guardrails R0.67 (ovl-07 で複数期待の一部を取りこぼす)。複合依頼の複数 skill 同時発火は description 単独では詰め切れず別 Wave 課題
+- negative 誤発火 0/4 維持・過剰 orchestration 0/1 維持
+
 ## [1.5.0] - 2026-07-11
 
 外部レビュー (2026-07-11・72/100) の指摘 5 件を全採用した Wave (計画書 §14 に対照表)。
