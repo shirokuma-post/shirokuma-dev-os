@@ -1,0 +1,80 @@
+{"id":"pos-doc-01","category":"positive","expected_skills":["doc-constitution"],"prompt":"CLAUDE.md に新しい運用ルールを追記したい。既存の設計書と重複しないか確認しながら整理して","rationale":"プロジェクト文書の更新 + 重複チェック = doc-constitution の中核発火条件"}
+{"id":"pos-doc-02","category":"positive","expected_skills":["doc-constitution"],"prompt":"README と docs/architecture.md で API 仕様の記述が食い違っている。どちらを正として直すべきか判断して修正して","rationale":"1事実=1正典の判断が必要な文書食い違い"}
+{"id":"pos-doc-03","category":"positive","expected_skills":["doc-constitution"],"prompt":"仕様変更に合わせて設計書を更新して。古い記述が残っていないかも一緒に見てほしい","rationale":"仕様変更に伴う doc 更新 + 陳腐化検出"}
+{"id":"pos-doc-04","category":"positive","expected_skills":["doc-constitution"],"prompt":"この決定事項、CLAUDE.md と README の両方に書いておいてくれる？","rationale":"複数ファイルへ同じ情報を書こうとした時 = description の明示発火条件"}
+{"id":"pos-doc-05","category":"positive","expected_skills":["doc-constitution"],"prompt":"memory ノートが散らかってきて、どれが正典か分からない。整理方針を決めて整理して","rationale":"正典の乱立の整理 = doc-constitution の防止対象そのもの"}
+{"id":"pos-doc-06","category":"positive","expected_skills":["doc-constitution"],"prompt":"新機能の仕様書を新規作成して。既存ドキュメント群のどこに置くか、Tier 分けも含めて整理して","rationale":"文書新規作成 + Tier 読み分け"}
+{"id":"pos-doc-07","category":"positive","expected_skills":["doc-constitution"],"prompt":"ドキュメント内で同じセットアップ手順が 3 箇所にコピペされている。一本化して","rationale":"コピペ重複の解消"}
+{"id":"pos-doc-08","category":"positive","expected_skills":["doc-constitution"],"prompt":"リリースノートと CHANGELOG の運用ルールを決めて、プロジェクト文書として定着させて","rationale":"文書運用ルールの新設"}
+{"id":"pos-doct-01","category":"positive","expected_skills":["engineering-doctrine"],"prompt":"TypeScript の型エラーが出ているので as any で握りつぶしてビルドを通したい。いい？","rationale":"as any で逃げそうな瞬間 = description の明示発火条件"}
+{"id":"pos-doct-02","category":"positive","expected_skills":["engineering-doctrine"],"prompt":"この認証バグ、原因は分からないけど retry を入れたら直った気がする。これで進めていい？","rationale":"根源不明のまま回避策で進めようとする場面"}
+{"id":"pos-doct-03","category":"positive","expected_skills":["engineering-doctrine"],"prompt":"RLS ポリシーはたぶん効いているはずなので、確認せずに次の実装へ進みたい","rationale":"推測で RLS/権限を判定しそうな瞬間"}
+{"id":"pos-doct-04","category":"positive","expected_skills":["engineering-doctrine"],"prompt":"本番環境だけで再現するエラーがある。調査して直して","rationale":"デバッグ作業 = 常時使う対象 + 実測規律"}
+{"id":"pos-doct-05","category":"positive","expected_skills":["engineering-doctrine"],"prompt":"この修正、とりあえず 1 箇所だけ直して残りは別タスクに切り出そうと思うがどうか","rationale":"段階N先送り/別タスク化で逃げそうな瞬間"}
+{"id":"pos-doct-06","category":"positive","expected_skills":["engineering-doctrine"],"prompt":"依存パッケージが緩い ^ 指定のままで実害が出た。どう直すのが筋か判断して直して","rationale":"重要依存の緩い指定放置 = 固定の規律"}
+{"id":"pos-doct-07","category":"positive","expected_skills":["engineering-doctrine"],"prompt":"決済まわりのバグを修正して。同じ原因で二度と起きないところまでやりたい","rationale":"修正 + 根源 + やり切る"}
+{"id":"pos-doct-08","category":"positive","expected_skills":["engineering-doctrine"],"prompt":"この PR をレビューして。エラーハンドリングを握りつぶしている箇所がある気がする","rationale":"レビュー時 = 常時使う対象"}
+{"id":"pos-univ-01","category":"positive","expected_skills":["engineering-doctrine-universal"],"prompt":"Python の CLI ツールをデバッグ中。原因不明のまま except: pass で逃げかけているのを立て直したい","rationale":"TS 以外のスタックでの思考様式ガード = 配布版の適用範囲"}
+{"id":"pos-univ-02","category":"positive","expected_skills":["engineering-doctrine-universal"],"prompt":"Rust プロジェクトの実装方針をレビューして。妥協や先送りが混ざっていないか見たい","rationale":"非 TS スタックのレビュー"}
+{"id":"pos-univ-03","category":"positive","expected_skills":["engineering-doctrine-universal"],"prompt":"Go のサービスで設定値の有効/無効を推測で判定していた。実測ベースの進め方に直したい","rationale":"非 TS スタックでの実測規律"}
+{"id":"pos-univ-04","category":"positive","expected_skills":["engineering-doctrine-universal"],"prompt":"Cursor でも Copilot でも効く、スタック非依存の開発規律ルールをこのリポジトリに整備したい","rationale":"AI agent 経由の開発全般向け = 配布版の目的"}
+{"id":"pos-univ-05","category":"positive","expected_skills":["engineering-doctrine-universal"],"prompt":"AI エージェントに開発を任せる時の思考様式ガードを、特定フレームワークに依存しない形で用意して","rationale":"汎用層の明示要求"}
+{"id":"pos-univ-06","category":"positive","expected_skills":["engineering-doctrine-universal"],"prompt":"Java のレガシーコード改修。個別バグに飛びつかず構造から見る進め方で計画して","rationale":"非 TS スタックでの幹から規律"}
+{"id":"pos-univ-07","category":"positive","expected_skills":["engineering-doctrine-universal"],"prompt":"この Python リポジトリ、テスト失敗を skip マークで先送りし続けている。立て直して","rationale":"非 TS スタックでの逃げの検出"}
+{"id":"pos-univ-08","category":"positive","expected_skills":["engineering-doctrine-universal"],"prompt":"複数の AI コーディングツールを併用するチーム向けに、逃げない・実測の規律を汎用の形で README に落としたい","rationale":"配布版 (第2層) の配給場面"}
+{"id":"pos-guard-01","category":"positive","expected_skills":["guardrails"],"prompt":"pre-commit で秘密スキャンを入れたい。gitleaks を使う想定でセットアップして","rationale":"pre-commit 秘密スキャン = guardrails の中核"}
+{"id":"pos-guard-02","category":"positive","expected_skills":["guardrails"],"prompt":"CI に型チェック・lint・本番ビルドの品質ゲートを追加して","rationale":"CI ゲート整備"}
+{"id":"pos-guard-03","category":"positive","expected_skills":["guardrails"],"prompt":"デプロイ前に回すスモークテストと E2E の最小セットを整備したい","rationale":"デプロイ前 E2E/スモーク"}
+{"id":"pos-guard-04","category":"positive","expected_skills":["guardrails"],"prompt":"同じクラスの障害が 2 回起きた。二度と起きないよう自動チェック (番人) を追加して","rationale":"1失敗クラスに1自動チェック = 再発防止"}
+{"id":"pos-guard-05","category":"positive","expected_skills":["guardrails"],"prompt":"ローンチ前チェックリストを作って、商用化前の品質ゲートを決めたい","rationale":"ローンチ前チェックリスト"}
+{"id":"pos-guard-06","category":"positive","expected_skills":["guardrails"],"prompt":"any 撲滅の型安全ラチェットを CI に入れて、既存件数から増えたら fail にして","rationale":"型安全ラチェット"}
+{"id":"pos-guard-07","category":"positive","expected_skills":["guardrails"],"prompt":"実行時の番犬として honeypot と死活監視を設計して入れたい","rationale":"実行時番犬 (honeypot/canary/死活監視)"}
+{"id":"pos-guard-08","category":"positive","expected_skills":["guardrails"],"prompt":"依存脆弱性スキャンと SBOM 生成を CI に足して","rationale":"SCA/SBOM = description 明示キーワード"}
+{"id":"pos-sess-01","category":"positive","expected_skills":["session-operations"],"prompt":"別セッションで進めていた作業の続きをこのセッションで引き継ぎたい。何から確認すべき？","rationale":"セッション引き継ぎ = 明示発火条件"}
+{"id":"pos-sess-02","category":"positive","expected_skills":["session-operations"],"prompt":"同じ repo を 2 つの AI セッションで並行して触っていたら編集が衝突した。運用を立て直したい","rationale":"共有状態の衝突"}
+{"id":"pos-sess-03","category":"positive","expected_skills":["session-operations"],"prompt":"この作業は長くなるので明日別セッションに引き継ぐ。引き継ぎノートを作って","rationale":"引き継ぎノート作成"}
+{"id":"pos-sess-04","category":"positive","expected_skills":["session-operations"],"prompt":"git log に自分が入れた覚えのない commit がある。別セッションの作業痕跡っぽい。どう進めるべき？","rationale":"他セッションの作業痕跡を見つけた時"}
+{"id":"pos-sess-05","category":"positive","expected_skills":["session-operations"],"prompt":"複数の Claude セッションを並走させて開発する時のルールを決めたい","rationale":"マルチセッション運用の型"}
+{"id":"pos-sess-06","category":"positive","expected_skills":["session-operations"],"prompt":"セッションを立ち上げるたびに前提の解釈ズレが起きる。起動時のプロトコルを整備して","rationale":"起動プロトコル30秒"}
+{"id":"pos-sess-07","category":"positive","expected_skills":["session-operations"],"prompt":"共有の index ファイルに 2 セッションが同時書き込みして内容が壊れた。復旧と再発防止を考えて","rationale":"共有 index 書込直列化"}
+{"id":"pos-sess-08","category":"positive","expected_skills":["session-operations"],"prompt":"ここで作業を中断する。次のセッションが迷わないように今の状態を引き継げる形で保存して","rationale":"セッション間の状態引き継ぎ"}
+{"id":"pos-staff-01","category":"positive","expected_skills":["staff-officer"],"prompt":"全ページのヘッダー刷新と API の認可修正と DB migration をまとめてやって","rationale":"独立 lane 3 本 = Worker 並列起動の対象"}
+{"id":"pos-staff-02","category":"positive","expected_skills":["staff-officer"],"prompt":"お気に入り機能を追加して。フロント・API・DB すべてに手が入る想定","rationale":"複数領域にまたがる実装タスク"}
+{"id":"pos-staff-03","category":"positive","expected_skills":["staff-officer"],"prompt":"リポジトリ全体のエラーハンドリング方針を変えて、全モジュールに行き渡らせて","rationale":"リポ横断の設計判断 + 大規模変更"}
+{"id":"pos-staff-04","category":"positive","expected_skills":["staff-officer"],"prompt":"決済機能を新規実装して。設計判断も必要だし、範囲も広い","rationale":"設計判断を伴う実装 = routing 表で拡張側"}
+{"id":"pos-staff-05","category":"positive","expected_skills":["staff-officer"],"prompt":"互いに独立した 3 つのバグをまとめて直してほしい","rationale":"独立 lane 複数 = 並列化判断"}
+{"id":"pos-staff-06","category":"positive","expected_skills":["staff-officer"],"prompt":"インフラ構成を変更して、アプリ側のコードもそれに合わせて直して","rationale":"インフラ変更を伴うタスク = 明示発火条件"}
+{"id":"pos-staff-07","category":"positive","expected_skills":["staff-officer"],"prompt":"大きめのリファクタをやりたい。複数領域にまたがるので進め方の分解から任せる","rationale":"タスク分解 + 複数領域"}
+{"id":"pos-staff-08","category":"positive","expected_skills":["staff-officer"],"prompt":"ユーザー管理画面と通知システムを並行で実装して","rationale":"独立した作業 lane 2 本"}
+{"id":"neg-01","category":"negative","expected_skills":[],"prompt":"おはよう！今日もよろしく","rationale":"雑談 — どの skill も発火してはいけない"}
+{"id":"neg-02","category":"negative","expected_skills":[],"prompt":"TypeScript の satisfies 演算子って何？","rationale":"単純な知識質問"}
+{"id":"neg-03","category":"negative","expected_skills":[],"prompt":"このエラーメッセージを日本語に翻訳して: Cannot read properties of undefined","rationale":"翻訳依頼"}
+{"id":"neg-04","category":"negative","subcategory":"small-task","expected_skills":[],"prompt":"README.md の typo を 1 箇所直して。recieve を receive に","rationale":"1ファイルの機械的 typo 修正 = staff-officer description の明示不発火条件"}
+{"id":"neg-05","category":"negative","subcategory":"small-task","expected_skills":[],"prompt":"この関数名を fetchUser から getUserById にリネームして。使用箇所は 1 ファイルだけ","rationale":"機械的 rename = staff-officer 不発火条件"}
+{"id":"neg-06","category":"negative","subcategory":"small-task","expected_skills":[],"prompt":"config.json の timeout を 30 から 60 に変えて","rationale":"設定値変更のみ = staff-officer 不発火条件"}
+{"id":"neg-07","category":"negative","expected_skills":[],"prompt":"HTTP の 302 と 307 の違いを教えて","rationale":"知識質問"}
+{"id":"neg-08","category":"negative","expected_skills":[],"prompt":"この JSON を YAML に変換して: {\"a\": 1, \"b\": [2, 3]}","rationale":"機械的フォーマット変換"}
+{"id":"neg-09","category":"negative","expected_skills":[],"prompt":"git rebase と merge の違いって何？どっちを使うべきかの一般論を教えて","rationale":"git 一般知識の質問 (作業指示ではない)"}
+{"id":"neg-10","category":"negative","subcategory":"small-task","expected_skills":[],"prompt":"変数名 tmp を userCount に変えるだけお願い","rationale":"1 変数 rename"}
+{"id":"neg-11","category":"negative","expected_skills":[],"prompt":"今日の作業はここまで。お疲れさま！","rationale":"雑談 (セッション終了の挨拶 — session-operations の誤発火を検査)"}
+{"id":"neg-12","category":"negative","subcategory":"small-task","expected_skills":[],"prompt":"この SQL を読みやすいように整形だけして: select id,name from users where active=true","rationale":"機械的整形"}
+{"id":"neg-13","category":"negative","subcategory":"small-task","expected_skills":[],"prompt":"package.json の description フィールドの文言を「社内向けツール」に変えて","rationale":"1 行の設定値変更"}
+{"id":"neg-14","category":"negative","expected_skills":[],"prompt":"Promise.all と Promise.allSettled の違いを説明して","rationale":"知識質問"}
+{"id":"neg-15","category":"negative","subcategory":"small-task","expected_skills":[],"prompt":"utils.js の 42 行目のコメントアウトされた 1 行を削除して","rationale":"1 行削除の機械修正"}
+{"id":"neg-16","category":"negative","expected_skills":[],"prompt":"curl で JSON を POST する例を見せて","rationale":"コマンド例の質問"}
+{"id":"neg-17","category":"negative","expected_skills":[],"prompt":"「非同期処理」は英語で何と言う？","rationale":"翻訳質問"}
+{"id":"neg-18","category":"negative","expected_skills":[],"prompt":"CSS の flex と grid はどう使い分けるのが一般的？","rationale":"一般論の質問 (実装指示ではない)"}
+{"id":"neg-19","category":"negative","subcategory":"small-task","expected_skills":[],"prompt":"この 1 ファイルだけインデントをタブからスペース 2 個に直して","rationale":"機械的整形の軽微修正"}
+{"id":"neg-20","category":"negative","expected_skills":[],"prompt":"Markdown で表を書く記法を教えて","rationale":"記法の質問 (ドキュメント作業指示ではない — doc-constitution の誤発火を検査)"}
+{"id":"ovl-01","category":"overlap","expected_skills":["guardrails","doc-constitution"],"prompt":"CI に禁止パターン検査を追加して、その運用手順を正典ドキュメントとして残して","rationale":"CI 番人 + doc 正典化。両方 or どちらかの発火が正解、他 skill の混入は NG"}
+{"id":"ovl-02","category":"overlap","expected_skills":["staff-officer","engineering-doctrine"],"prompt":"本番で複数箇所が絡む障害が出ている。複数の観点で調査を並列に走らせて根本原因から直したい","rationale":"multi-agent debug。orchestration + 根源規律"}
+{"id":"ovl-03","category":"overlap","expected_skills":["engineering-doctrine","staff-officer"],"prompt":"実装中に頼まれていない箇所の不整合を見つけた。今のタスクとの兼ね合いをどう捌くべきか判断して進めて","rationale":"scope 外発見の扱い = 計画書 §7.2 指定の overlap ケース"}
+{"id":"ovl-04","category":"overlap","expected_skills":["engineering-doctrine"],"prompt":"この TypeScript/Next.js リポジトリのデバッグで、逃げ・推測を止める思考様式ガードを効かせながら直して","rationale":"doctrine⇄universal の層選択: TS スタック文脈では engineering-doctrine が優先 1 個"}
+{"id":"ovl-05","category":"overlap","expected_skills":["engineering-doctrine-universal"],"prompt":"社外配布用に、特定スタックの用語を含まない開発規律セットを整備したい","rationale":"doctrine⇄universal の層選択: 配布・スタック非依存文脈では universal が優先 1 個"}
+{"id":"ovl-06","category":"overlap","expected_skills":["session-operations","doc-constitution"],"prompt":"セッションを跨ぐ引き継ぎノートを書いて、あわせて CLAUDE.md の運用ルールも最新化して","rationale":"引き継ぎ + doc 更新"}
+{"id":"ovl-07","category":"overlap","expected_skills":["guardrails","doc-constitution"],"prompt":"再発防止の自動チェックを CI に入れて、失敗カタログにも今回の失敗クラスを追記して","rationale":"番人追加 + 失敗カタログ (doc) 還流"}
+{"id":"ovl-08","category":"overlap","expected_skills":["staff-officer","session-operations"],"prompt":"大改修を複数セッション + 複数 agent の並走でやりたい。衝突しない分担と進め方を設計して実行して","rationale":"orchestration + マルチセッション運用"}
+{"id":"ovl-09","category":"overlap","expected_skills":["staff-officer","engineering-doctrine"],"prompt":"レビューで NG が 3 件出た。どこへ差し戻すかの判断と、as any で握りつぶしている 1 件の扱いを決めて直させて","rationale":"差し戻し routing + 規律違反の扱い"}
+{"id":"ovl-10","category":"overlap","expected_skills":["engineering-doctrine","guardrails"],"prompt":"本番障害の根本原因を実測で特定して、恒久対策として CI に番人を入れるところまでやり切って","rationale":"根源 + 実測 + 番人追加"}
+{"id":"ovl-11","category":"overlap","expected_skills":["doc-constitution","guardrails"],"prompt":"ドキュメントの重複記述を整理して、これを機に doc の壊れ (リンク切れ・重複) を検出する lint も CI に入れたい","rationale":"doc 整理 + doc lint 番人"}
+{"id":"ovl-12","category":"overlap","expected_skills":["session-operations","staff-officer"],"prompt":"他セッションが触った形跡のあるモジュールに対して、複数ファイルにまたがる機能追加をやることになった。安全に進めて","rationale":"他セッション痕跡 + 複数ファイル実装"}

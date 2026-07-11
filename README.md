@@ -226,6 +226,16 @@ node scripts/audit-self-integrity.mjs
 
 GitHub Actions で `push` / `pull_request` 時に自動実行 (= [.github/workflows/self-integrity.yml](.github/workflows/self-integrity.yml))。
 
+### trigger eval (発火精度の計測)
+
+```bash
+node tests/trigger-evals/run-trigger-eval.mjs --calibrate             # 較正 1 call: raw 出力と抽出結果を確認
+node tests/trigger-evals/run-trigger-eval.mjs --sample 15             # pilot (category 均等サンプル)
+node tests/trigger-evals/run-trigger-eval.mjs --resume --confirm-full # フル 80 case
+```
+
+**コスト注意: 1 case = 1 API 会話 = フル実行は 80 API call**。認証済み `claude` CLI が必要。Skill の tool call だけを発火と数え、`results.jsonl` へ 1 case ごと追記 (中断安全 = `--resume` で既走 id を skip)。集計のみは `--report`。behavior eval は [tests/behavior-evals/README.md](tests/behavior-evals/README.md) (設計 + fixture のみ・実走は次 Wave)。
+
 ### Contribution
 
 [CONTRIBUTING.md](.github/CONTRIBUTING.md) を参照。
