@@ -166,6 +166,8 @@ function runCase(c) {
     fired_skills: [],
     all_tool_calls: [],
     is_error: false,
+    truncated: false, // --max-turns 打ち切り (result event は is_error だが Skill 発火計測は有効)
+    result_subtype: null, // result event の subtype (観測用)
     error: null,
     cost_usd: null,
     num_turns: null,
@@ -208,9 +210,20 @@ function runCase(c) {
     if (ev.type === "result") {
       rec.cost_usd = ev.total_cost_usd ?? null;
       rec.num_turns = ev.num_turns ?? null;
+      rec.result_subtype = ev.subtype ?? null;
       if (ev.is_error) {
         rec.is_error = true;
-        rec.error = rec.error ?? String(ev.result ?? "").slice(0, 200);
+        const msg = String(ev.result ?? "").slice(0, 200);
+        // 2026-07-11 pilot 15 件 + calibration log 実測:
+        //   --max-turns 打ち切り = is_error:true だが result text が空 (9/9 件とも error='')。
+        //     stream は正常 parse・Skill tool_use は打ち切り前に記録済 → trigger 計測有効。
+        //   真の実行失敗 = 非空 message (例 'Not logged in · Please run /login') /
+        //     spawn error / plugin_not_loaded / timeout。
+        if (rec.error == null && msg === "") {
+          rec.truncated = true;
+        } else {
+          rec.error = rec.error ?? msg;
+        }
       }
     }
   }
@@ -219,11 +232,26 @@ function runCase(c) {
 }
 
 // ---------- aggregate ----------
+// record 分類 (2026-07-11 pilot 実測起点):
+//   completed  = 完走 (is_error なし)                        → 計測有効
+//   truncated  = --max-turns 打ち切り (Skill 発火は記録済)     → 計測有効
+//   failed     = 真の実行失敗 (spawn/API error・unparsed>0)   → 集計除外
+// 旧 record (truncated field 追加前) 互換: 打ち切りは error==='' で実測判別。
+function classify(r) {
+  if ((r.unparsed_lines ?? 0) > 0) return "failed";
+  if (r.truncated) return "truncated";
+  if (!r.is_error) return "completed";
+  if (r.error === "") return "truncated"; // 旧 record 互換 (pilot 9/9 件実測)
+  return "failed";
+}
+
 function aggregate(records) {
   const latest = new Map();
-  for (const r of records) latest.set(r.id, r); // 後勝ち = re-run が上書き
-  const rs = [...latest.values()].filter((r) => !r.is_error);
-  const errs = [...latest.values()].filter((r) => r.is_error);
+  for (const r of records) latest.set(r.id, r); // 後勝ち = 同一 id は最新 entry を採用
+  const all = [...latest.values()];
+  const rs = all.filter((r) => classify(r) !== "failed");
+  const errs = all.filter((r) => classify(r) === "failed");
+  const nTrunc = rs.filter((r) => classify(r) === "truncated").length;
   const stat = Object.fromEntries(SIX.map((s) => [s, { tp: 0, fp: 0, fn: 0 }]));
   let negTotal = 0, negFired = 0, smallTotal = 0, smallStaff = 0;
   let ovlTotal = 0, ovlPass = 0, multi3 = 0;
@@ -251,7 +279,9 @@ function aggregate(records) {
     }
   }
   const pct = (a, b) => (b === 0 ? "n/a" : (a / b).toFixed(2));
-  console.log(`\n== 集計 (有効 ${rs.length} 件 / error ${errs.length} 件) ==`);
+  console.log(
+    `\n== 集計 (計測有効 ${rs.length} 件 = 完走 ${rs.length - nTrunc} + max-turns打ち切り ${nTrunc} / 実行失敗 ${errs.length} 件) ==`
+  );
   console.log("| skill | TP | FP | FN | precision | recall |");
   console.log("|---|---|---|---|---|---|");
   for (const s of SIX) {
@@ -262,7 +292,8 @@ function aggregate(records) {
   console.log(`small-task staff-officer 過剰 orchestration: ${smallStaff}/${smallTotal} (目標 <= 0.05)`);
   console.log(`overlap pass (fired ⊆ expected かつ 1 個以上): ${ovlPass}/${ovlTotal}`);
   console.log(`3+ skill 同時発火: ${multi3} 件 (目標 = 0)`);
-  if (errs.length) console.log(`\nerror cases: ${errs.map((r) => `${r.id}(${r.error})`).join(", ")}`);
+  if (errs.length)
+    console.log(`\n実行失敗 cases: ${errs.map((r) => `${r.id}(${r.error})`).join(", ")}`);
 }
 
 // ---------- main ----------
@@ -293,7 +324,12 @@ if (OPT.calibrate) {
 
 let queue = OPT.sample ? sampleCases(allCases, Number(OPT.sample)) : [...allCases];
 if (OPT.resume) {
-  const done = new Set(readJsonl(OPT.results).filter((r) => !r.is_error).map((r) => r.id));
+  // 同一 id の最新 entry を採用し、計測有効 (completed/truncated) なら skip = 再実行 (API call) しない
+  const latest = new Map();
+  for (const r of readJsonl(OPT.results)) latest.set(r.id, r);
+  const done = new Set(
+    [...latest.values()].filter((r) => classify(r) !== "failed").map((r) => r.id)
+  );
   queue = queue.filter((c) => !done.has(c.id));
 }
 if (queue.length > 20 && !OPT.confirmFull && !OPT.dryRun) {
@@ -311,9 +347,11 @@ for (const c of queue) {
   if (!out) continue; // dry-run
   fs.appendFileSync(OPT.results, JSON.stringify(out.rec) + "\n"); // 1 case ごと追記 = 中断安全
   console.log(
-    out.rec.is_error
+    classify(out.rec) === "failed"
       ? `ERROR (${out.rec.error})`
-      : `fired=[${out.rec.fired_skills.join(", ")}] cost=$${out.rec.cost_usd ?? "?"}`
+      : `fired=[${out.rec.fired_skills.join(", ")}] cost=$${out.rec.cost_usd ?? "?"}${
+          out.rec.truncated ? " (max-turns打ち切り・計測有効)" : ""
+        }`
   );
 }
 if (!OPT.dryRun) aggregate(readJsonl(OPT.results));
