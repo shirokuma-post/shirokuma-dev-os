@@ -1,5 +1,25 @@
 # Changelog
 
+## [1.5.0] - 2026-07-11
+
+外部レビュー (2026-07-11・72/100) の指摘 5 件を全採用した Wave (計画書 §14 に対照表)。
+
+### Added
+- **staff-officer capability/risk-based routing** (344c5b1) — routing 表 (質問不発火 / 低risk 1 file = 直接実装 / 2〜5 file 1 責務 = 実装+独立review / 独立lane 2+ = 並列Worker / 競合 = 逐次化 / 価値衝突 = L0)・review NG は rework lane・worker handoff 6 項目 (objective/scope/read set/write set/完了条件/evidence) 必須化
+- **guardrails universal core / stack pack 分離** (981ac1d) — 17 script を `assets/packs/{universal 6, typescript 6, nextjs 1, supabase-postgres 3}` へ再配置 (16 file は R100 = 内容不変)・pack.json ×4 (id/scope/severity/evidence/remediation/limitations)・INVARIANTS.template を普遍 72 行 + pack fragment 20 行に分離 (missing 0 確認)
+- **init.mjs preset 対応** (a1cb651) — `--preset=minimal/saas`・`--packs`・stack 検出 (根拠付き推奨・TTY 時のみ Y/n 確認)・INVARIANTS fragment 合成・`--dry-run`・`--force` = `.bak-<日時>` backup 後上書き・placeholder 残数の正直表示 (実走 3 パターン: minimal 33 種 / saas 44 種)
+- **evals** (20216bf) — trigger eval 80 case (positive 48 / negative 20 / overlap 12) + resumable harness (`--calibrate` / `--sample` / `--resume` / `--report` / 20 件超は `--confirm-full` ガード)・behavior eval 設計 + fixture 3 本 (scope-discipline / evidence-completion / live-vs-template)
+- **audit check7 = skill 言及整合** (bfbb246) — GOVERNANCE / init.mjs / README の skill 言及が skills/ 実在と一致するかの semantic consistency 検査 (汎用・意図的 FAIL 注入で検出動作を証明済)
+
+### Changed
+- README / GOVERNANCE 第2層 / init.mjs の語調を §3.4「停止ではなく工程変更」等と整合 (guardrails 言及漏れ 3 箇所解消) (bfbb246)
+- GOVERNANCE 第2層の発火推奨セットを 6 skill 言及へ整合 (bfbb246)
+- plugin.json (Claude/Codex 両方) version 1.5.0
+
+### Honest notes (未実走の明記)
+- **eval は「整備済」であって「実走済」ではない** — headless `claude -p` が本 Mac で未認証 (Desktop 認証は子 CLI に非伝播・raw log 有) のため pilot 未実走。§7.2 KPI (precision/recall ≥ 0.90 等) の実測値は存在しない。解除 = `claude /login` 後 `--calibrate` → `--sample 15`
+- behavior eval も fixture まで・実走は同 auth 待ち。計画書 §9 Phase 2 Gate は未通過
+
 ## [1.4.0] - 2026-07-11
 
 ### Added
