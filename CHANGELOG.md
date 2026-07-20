@@ -1,5 +1,47 @@
 # Changelog
 
+## [2.0.0] - 2026-07-20
+
+**破壊的変更。削除はゼロ、移動と発火条件の変更のみ。**
+
+### 追加
+- `hooks/` — UserPromptSubmit（受け口検査 + doctrine + 境界マップ注入）と
+  Stop（受け入れ条件の検査・完了ブロック・Claim Integrity・判断の回収）
+- `doctrine/core-2000.md` — 常時ロードする 1,956 字。実測で 34KB と同等以上を +3.1% のトークンで
+- `benchmarks/` — 課金なしの自己検査（8/8）・フック起動検査（4/4）・採点器の検証（5/5）＋ モデル署名
+- `templates/BOUNDARIES.*` — 境界線マップと聞き取りテンプレート
+- `skills/boundary-authoring/` — 事業側への聞き取りで BOUNDARIES.md を組み立てる
+
+### 変更
+- `skills/guardrails` → `skills/guardrail-authoring`（検出器を書く時のみ発火）
+- `staff-officer` / `doc-constitution` / `session-operations` の発火条件を大幅に狭めた
+- 判定を四値化: PASS / FAIL / **INVALID**（測れなかった）/ **UNSPECIFIED**（受け入れ条件が未定義）
+  → 後ろ 2 つは止めないが「緑」とも言わせない
+
+### 移動（削除ではない）
+- `skills/engineering-doctrine` と `engineering-doctrine-universal`（計 33KB）
+  → `docs/doctrine-full.md`。**自動発火しない on-demand 資料へ**
+
+### 実測の根拠
+約 300 run。詳細は docs/ と benchmarks/ を参照。
+- 弱いモデルの逸脱率: モデル間 72 ポイントの開き → 0
+- 完了ブロック: 機能的正しさ 0/6 → 6/6（Haiku・圧力条件）
+- 決定記録: 人間が 1 回裁定すると 2 反復目から Opus 素を超え、5 反復連続で安定
+- **裁定しないとループは誤りを固定する**（「過去5セッションとも同じ判断だったため踏襲」）
+
+### 未検証
+**実プロジェクトでの使用実績はゼロ。** README の該当節を必ず読むこと。
+
+### 修正（2026-07-21・実運用初日に発見した 4 件。2.0.0 未公開のため本エントリに折り込み）
+- **Stop フックの INVALID 通知に抑制がなく、設定ゼロのプロジェクトで空ターンの無限ループ**（実測 9 連続発火）。
+  additionalContext は harness によってはモデルを再起動させるため、`invalidTold` で 1 セッション 1 回に
+- 設定ゼロ（invariants なし・command なし）を INVALID でなく **UNSPECIFIED** に正しく分類
+  （従来は UNSPECIFIED 分岐が設定ゼロでは到達不能だった）
+- 壊れた invariant のエラー詳細を INVALID メッセージに表示（従来は握り潰し）
+- **Claim Integrity 誤検知 2 種を fixture 化して修正**: 「〜のが安全です」等の推奨表現（lookbehind 除外）と、
+  「」『』/backtick 引用内の発火語（主張判定前に引用を除去）。自己検査 8 → 10 fixture・10/10
+- 注: `benchmarks/_harness-src/` の実験生ログは保全目的で同梱。**公開前に要精査**
+
 ## [1.5.1] - 2026-07-11
 
 trigger eval の初 live 実測 (`claude /login` 後) と、その結果に基づく description tuning。

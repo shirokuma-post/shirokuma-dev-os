@@ -7,11 +7,12 @@
 > 二重管理（同じ普遍原理がプラグインとプロジェクトの両方に書かれ、やがてズレる）を防ぐための統治。
 >
 > **配布形態（v1.2 で確定）**: 本 repo は **2 層を同梱したまま配布する**。
-> - **第 1 層** = `engineering-doctrine`。作者の n=1 経験則を固有名だけ剥いて**濃いまま**保持する層
+> - **第 1 層（2.0 で降格）** = `docs/doctrine-full.md`。作者の n=1 経験則と思想史。**自動発火しない on-demand 資料**
+> - **常時ロード層（2.0 で新設）** = `doctrine/core-2000.md`（1,956 字）。実測で 34KB と同等以上を +3.1% のトークンで
 >   （技術スタック前提・実戦の具体例を含む）。外部読者には「規律がどんな失敗から生まれたか」を示す**実例集**として価値がある。
-> - **第 2 層（発火推奨セット）** = `engineering-doctrine-universal` + `doc-constitution` + `staff-officer` + `session-operations` + `guardrails`。
+> - **第 2 層（発火条件を狭めた skill 群）** = `boundary-authoring` + `doc-constitution` + `staff-officer` + `session-operations` + `guardrail-authoring`。
 >   固有名・スタック前提を剥いた普遍核。**外部プロジェクトで実際に発火させるのはこちら**。
->   （`guardrails` = 番人と品質ゲート。失敗カタログ + CI/番人雛形で「番人を緩めない」を実装として配給する層）
+>   （`guardrail-authoring` = 番人と品質ゲート。失敗カタログ + CI/番人雛形で「番人を緩めない」を実装として配給する層）
 > 迷ったら: 読み物としては両層、運用に組み込むのは第 2 層 + templates。
 
 ---
@@ -37,18 +38,21 @@
 
 | 事実 | 正典の所在 |
 |---|---|
-| 思考様式（逃げ/根源/実測/幹/横展開/依存固定） | **親**: `skills/engineering-doctrine`（配布版 = `skills/engineering-doctrine-universal`） |
-| **Intent Anchor（意図の先出し宣言）** | **親**: 原理 = `skills/engineering-doctrine` の Intent Anchor 節・発火装置 = `templates/CLAUDE.template.md` §0.5 + `skills/staff-officer` Worker テンプレ冒頭 |
+| 思考様式（逃げ/根源/実測/幹/横展開/依存固定） | **親**: `doctrine/core-2000.md`（常時）／ 全文 = `docs/doctrine-full.md`（on-demand） |
+| **境界線マップと聞き取り** | **親**: `skills/boundary-authoring` + `templates/BOUNDARIES.*` |
+| **完了主張の統制（Claim Integrity）・四値判定** | **親**: `hooks/stop.mjs`（実装が正典。主張は `benchmarks/` で再現可能） |
+| **依頼の受け口検査・境界注入** | **親**: `hooks/intake.mjs` |
+| **Intent Anchor（意図の先出し宣言）** | **親**: `hooks/intake.mjs` の境界分類。**2.0 で内省ベースから境界分類ベースへ変更**（実測: 昇格 0/3 → 3/3） |
 | 文書運用ルール（7条 + Tier 読み分け） | **親**: `skills/doc-constitution` |
 | 参謀フロー（5層 × 4ライン・検品・ゲート・振り返り） | **親**: `skills/staff-officer`（振り返り 5 軸の雛形 = `templates/RETROSPECTIVE.template.md`） |
 | マルチセッション運用（1ドメイン1セッション/起動/撤退/handoff） | **親**: `skills/session-operations` |
-| 番人と品質ゲート（失敗カタログ + CI/番人雛形） | **親**: `skills/guardrails` |
+| 番人と品質ゲート（失敗カタログ + CI/番人雛形） | **親**: `skills/guardrail-authoring` |
 | 不変ルールの普遍部（セキュリティ核/性能核/…） | **親**: `templates/INVARIANTS.template.md` |
 | プロジェクトの北極星・指揮系統の骨 | **親**: `templates/CLAUDE.template.md` |
 | 製品名・project ID・URL・team・鍵名 | **子**: 各プロジェクトの `CLAUDE.md` / `INVARIANTS.md` |
 | 固有の境界線・アーキ図・固有の監視対象 | **子**: 各プロジェクトの設計正典 |
 
-> 迷ったら原則（→ `engineering-doctrine` 規律4）: 製品名・ID・URL・固有アーキが出てきたら「肉」= 子。
+> 迷ったら原則（→ `docs/doctrine-full.md` 規律4）: 製品名・ID・URL・固有アーキが出てきたら「肉」= 子。
 > 落として「骨（なぜそうするか＝原理）」だけ親に残す。
 
 ---
@@ -71,7 +75,7 @@
 4. **重複除去** — 昇格したら、子側の元記述は親への **参照に置き換える**（実体を2箇所に残さない = 1事実=1正典）。
 
 > 還流の実例（2026-05-31）: 「仕組みを作った≠完了」は元々 `staff-officer` だけにあった。
-> これを思考の構えとして `engineering-doctrine` 規律5 に昇格し、`staff-officer` 側は
+> これを思考の構えとして `docs/doctrine-full.md` 規律5 に昇格し、`staff-officer` 側は
 > 「正典は規律5」と参照しつつ参謀実務の差分だけに置き換えた。これが還流の型。
 
 ### 還流は月次ルーティン（不定期にしない）

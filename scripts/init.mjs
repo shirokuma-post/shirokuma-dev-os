@@ -29,7 +29,7 @@ import readline from 'node:readline/promises';
 const __filename = fileURLToPath(import.meta.url);
 const ROOT = path.resolve(path.dirname(__filename), '..');
 const TEMPLATES_DIR = path.join(ROOT, 'templates');
-const PACKS_DIR = path.join(ROOT, 'skills', 'guardrails', 'assets', 'packs');
+const PACKS_DIR = path.join(ROOT, 'skills', 'guardrail-authoring', 'assets', 'packs');
 
 /** pack の正準順序 (= 合成順序もこれに従う) */
 const PACK_ORDER = ['universal', 'typescript', 'nextjs', 'supabase-postgres'];
@@ -483,7 +483,8 @@ async function main() {
   console.log(`   - doc-constitution               (= 文書運用憲法)`);
   console.log(`   - staff-officer                  (= 参謀フロー 5 層 × 4 ライン)`);
   console.log(`   - session-operations             (= マルチセッション運用の型)`);
-  console.log(`   - guardrails                     (= 番人と品質ゲート・失敗カタログ + CI/番人雛形)`);
+  console.log(`   - guardrail-authoring            (= 検出器・CI・品質ゲートを書く時のみ)
+   - boundary-authoring             (= 境界線マップの聞き取り)`);
 
   if (args.dryRun) {
     console.log(`\n🔎 dry-run 終了 — 実行するには --dry-run を外してください\n`);
