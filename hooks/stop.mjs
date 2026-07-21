@@ -75,8 +75,9 @@ const harvestPlays = () => {
   const picked = [];
   let cap = false;
   for (const raw of lines) {
-    const line = raw.trim().replace(/^[-*・]\s*/, '').replace(/\*\*/g, '');
-    if (/再利用できそうな手順/.test(line)) { cap = true; continue; }
+    const line = raw.trim().replace(/\*\*/g, '').replace(/^[-*・]\s*/, '');
+    // 行頭一致のみ（実測 2026-07-21: 本文中の言及だけで発火し、機能説明の断片が手順として混入した）
+    if (/^再利用できそうな手順/.test(line)) { cap = true; continue; }
     if (!cap) continue;
     if (/^#{1,4}\s/.test(line) || /判断が要った/.test(line)) break;
     if (/(受け入れ条件が未定義|検証されて(いない|いません)|\bnot verified\b|^なし$)/i.test(line)) break;
@@ -107,8 +108,9 @@ const harvest = () => {
   const picked = [];
   let cap = false;
   for (const raw of lines) {
-    const line = raw.trim().replace(/^[-*・]\s*/, '').replace(/\*\*/g, '');
-    if (/(判断が要った|設計判断|決めた点|前提を置)/.test(line)) { cap = true; continue; }
+    const line = raw.trim().replace(/\*\*/g, '').replace(/^[-*・]\s*/, '');
+    // 行頭一致のみ（本文中の言及での誤発火を防ぐ・手順回収と同じ欠陥クラス）
+    if (/^(判断が要った|設計判断|決めた点|前提を置)/.test(line)) { cap = true; continue; }
     if (!cap) continue;
     if (/^#{1,4}\s/.test(line)) break;
     // 手順セクションは判断ではない（別ファイルへ回収する）
