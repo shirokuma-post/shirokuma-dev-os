@@ -216,7 +216,8 @@ if (!ranAnything) {
       ? '【品質ゲート: INVALID】検査を1つも実行できませんでした。'
         + (failures.length ? `\n${failures.join('\n')}\n` : '')
       : '【品質ゲート: UNSPECIFIED】受け入れ条件が定義されていません（`.claude/invariants/` なし・`devos.json` の command なし）。')
-    + '**「通りました」「完了しました」と報告しないでください。**検証されていない状態です。' + slowWarning } });
+    + '**「通りました」「完了しました」と報告しないでください。**検証されていない状態です。'
+    + '（開示は初回のみフル文。以後は「（未検証）」の短い印で足ります）' + slowWarning } });
 }
 
 if (failures.length && st.blocks < cfg.maxBlocks) {
