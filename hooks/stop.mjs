@@ -200,10 +200,28 @@ const needDisclosure = (evidence) => {
     + `嘘をつかないだけでは足りません。**読み手が未検証だと分かる形で書いてください。**`;
 };
 
+// ── 報告形式の検査（判断欄の欠落）─────────────────
+// 回収の空振りは静かな失敗（見出しが崩れて回収ゼロでも誰も気づかない）。
+// 実質的な作業報告なのに「判断が要った点」欄が無ければ、1 セッション 1 回だけ差し戻す。
+// 弱いモデルほど形式を省略する（実測 9-1: 開示は指示だけで 1/3・block で 3/3）。
+const hasJudgmentSection = () => msg.split('\n').some((raw) => {
+  const line = raw.trim().replace(/\*\*/g, '').replace(/^[-*・#\s]+/, '');
+  return /^(判断が要った|設計判断|決めた点|前提を置)/.test(line);
+});
+const needFormat = () => {
+  if (st.formatAsked) return null;
+  if (msg.length < 120 || claimLevel() === 0) return null;   // 短い返答・作業報告でないものは対象外（日本語 120 字 ≈ 実質的な報告の下限）
+  if (hasJudgmentSection()) return null;
+  st.formatAsked = true; save();
+  return `報告に「**判断が要った点**」の欄がありません（無い場合も「なし」と書く決まりです）。\n`
+    + `この欄が無いと、あなたの判断は記録されず、次のセッションに引き継がれません。\n`
+    + `報告の形式: ①結果 ②判断が要った点（無ければ「なし」） ③締めは次のアクション。`;
+};
+
 // ── 判定 ────────────────────────────────────
 if (!ranAnything) {
   harvest();
-  const ci = claimIntegrity(0) || needDisclosure(0);
+  const ci = claimIntegrity(0) || needDisclosure(0) || needFormat();
   if (ci && st.blocks < cfg.maxBlocks) { st.blocks += 1; save(); out({ decision: "block", reason: ci }); }
   // INVALID の注意喚起は 1 セッション 1 回だけ。
   // 毎ターン付けると、開示済みの応答にも警告が乗り続け、harness 側で応答ループを誘発する（2026-07-21 実測）。
@@ -241,13 +259,17 @@ if (failures.length) {
 // 全て通った。ただし受け入れ条件が1つも無いなら「検証済み」とは言わせない。
 const n = harvest();
 if (invFiles.length === 0) {
-  const ci = claimIntegrity(1) || needDisclosure(1);
+  const ci = claimIntegrity(1) || needDisclosure(1) || needFormat();
   if (ci && st.blocks < cfg.maxBlocks) { st.blocks += 1; save(); out({ decision: "block", reason: ci }); }
   out({ hookSpecificOutput: { hookEventName: 'Stop', additionalContext:
     '【品質ゲート: UNSPECIFIED】`.claude/invariants/` に受け入れ条件が1件もありません。'
     + 'プロジェクトのテストは通りましたが、**それが仕様を満たす証拠にはなりません**。'
     + '報告には「受け入れ条件が未定義のため、検証されていない」と明記してください。'
     + (n ? `\n判断 ${n} 件を DECISIONS.md に candidate として記録しました。` : '') + slowWarning } });
+}
+{
+  const fi = needFormat();
+  if (fi && st.blocks < cfg.maxBlocks) { st.blocks += 1; save(); out({ decision: 'block', reason: fi }); }
 }
 out(n ? { hookSpecificOutput: { hookEventName: 'Stop', additionalContext:
   `【品質ゲート: PASS】受け入れ条件 ${invFiles.length} 件すべて合格。`
