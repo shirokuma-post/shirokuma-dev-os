@@ -218,8 +218,25 @@ const needFormat = () => {
     + `報告の形式: ①結果 ②判断が要った点（無ければ「なし」） ③締めは次のアクション。`;
 };
 
+// ── 責任境界の受け渡し（E5 契約・2026-07-21）───────────
+// 実行制御層（Windshield 等）が読む機械可読の判定。契約は AIOM pj/scratchpad/E5-CONTRACT.md。
+// 生成は dev-os のみ・一方向。実行時状態なので git 管理しない。
+const writeVerdict = (verdict, evidence) => {
+  try {
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(join(dir, 'verdict.json'), JSON.stringify({
+      verdict, evidence,
+      failures: failures.map((f) => String(f).slice(0, 200)),
+      invariants: invFiles.length,
+      session: sid,
+      at: new Date().toISOString(),
+    }, null, 2));
+  } catch {}
+};
+
 // ── 判定 ────────────────────────────────────
 if (!ranAnything) {
+  writeVerdict(invFiles.length > 0 || !!cfg.command ? "INVALID" : "UNSPECIFIED", 0);
   harvest();
   const ci = claimIntegrity(0) || needDisclosure(0) || needFormat();
   if (ci && st.blocks < cfg.maxBlocks) { st.blocks += 1; save(); out({ decision: "block", reason: ci }); }
@@ -241,6 +258,7 @@ if (!ranAnything) {
 }
 
 if (failures.length && st.blocks < cfg.maxBlocks) {
+  writeVerdict("FAIL", invFiles.length ? 2 : 1);
   st.blocks += 1; save();
   out({ decision: 'block', reason:
     `受け入れ条件が満たされていません（${st.blocks}/${cfg.maxBlocks} 回目）。\n\n`
@@ -250,6 +268,7 @@ if (failures.length && st.blocks < cfg.maxBlocks) {
 }
 
 if (failures.length) {
+  writeVerdict("FAIL", invFiles.length ? 2 : 1);
   harvest();
   out({ hookSpecificOutput: { hookEventName: 'Stop', additionalContext:
     `【品質ゲート: FAIL（差し戻し上限）】まだ満たされていない条件があります。\n${failures.join('\n')}\n`
@@ -259,6 +278,7 @@ if (failures.length) {
 // 全て通った。ただし受け入れ条件が1つも無いなら「検証済み」とは言わせない。
 const n = harvest();
 if (invFiles.length === 0) {
+  writeVerdict("UNSPECIFIED", 1);
   const ci = claimIntegrity(1) || needDisclosure(1) || needFormat();
   if (ci && st.blocks < cfg.maxBlocks) { st.blocks += 1; save(); out({ decision: "block", reason: ci }); }
   out({ hookSpecificOutput: { hookEventName: 'Stop', additionalContext:
@@ -267,6 +287,7 @@ if (invFiles.length === 0) {
     + '報告には「受け入れ条件が未定義のため、検証されていない」と明記してください。'
     + (n ? `\n判断 ${n} 件を DECISIONS.md に candidate として記録しました。` : '') + slowWarning } });
 }
+writeVerdict("PASS", 2);
 {
   const fi = needFormat();
   if (fi && st.blocks < cfg.maxBlocks) { st.blocks += 1; save(); out({ decision: 'block', reason: fi }); }
