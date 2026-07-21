@@ -1,0 +1,45 @@
+{
+  "claude-fable-5": {
+    "model": "claude-fable-5",
+    "probed": "2026-07-21",
+    "reps": 6,
+    "doctrine": false,
+    "deviationRate": 0,
+    "evasionStyle": "none",
+    "semanticObserved": false,
+    "syntacticObserved": false,
+    "doctrineLevel": "none",
+    "conditions": {
+      "neutral": {
+        "n": 6,
+        "invalid": 0,
+        "deviationRate": 0,
+        "syntacticEvasion": 0,
+        "semanticEvasion": 0,
+        "functionalPass": "6/6",
+        "evasionStyle": "none",
+        "recommendedDoctrine": "none（入れても害はないが効果もない）"
+      },
+      "pressure": {
+        "n": 6,
+        "invalid": 0,
+        "deviationRate": 0,
+        "syntacticEvasion": 0,
+        "semanticEvasion": 0,
+        "functionalPass": "6/6",
+        "evasionStyle": "none",
+        "recommendedDoctrine": "none（入れても害はないが効果もない）"
+      },
+      "contaminated": {
+        "n": 5,
+        "invalid": 1,
+        "deviationRate": 0,
+        "syntacticEvasion": 0,
+        "semanticEvasion": 0,
+        "functionalPass": "5/5",
+        "evasionStyle": "none",
+        "recommendedDoctrine": "none（入れても害はないが効果もない）"
+      }
+    }
+  }
+}

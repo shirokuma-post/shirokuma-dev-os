@@ -1,1 +1,5 @@
 .DS_Store
+
+# ベンチマーク用の一時導入ツール（初回実行時に npm で入る・成果物ではない）
+benchmarks/model/.tools/
+benchmarks/model/.runs/
