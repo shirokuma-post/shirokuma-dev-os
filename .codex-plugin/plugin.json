@@ -1,7 +1,7 @@
 {
   "name": "shirokuma-dev-os",
-  "version": "1.5.1",
-  "description": "開発の普遍原理を束ねた汎用開発OS。思考様式ガード(engineering-doctrine + 配布版 engineering-doctrine-universal)・Intent Anchor(意図の先出し宣言 = 発火装置)・文書運用憲法(doc-constitution)・参謀モードの指揮系統(staff-officer)・マルチセッション運用の型(session-operations)・番人と品質ゲート(guardrails = 失敗カタログ failure-catalog + pre-commit/CI/実行時番犬の雛形) を収録し、新規プロジェクト用の CLAUDE / INVARIANTS / DOC_CONSTITUTION / RETROSPECTIVE テンプレートを同梱する。",
+  "version": "2.0.0",
+  "description": "能力にばらつきのある AI でも、開発工程だけは揃えるための門番。常時ロードは 2,000 字（実測: 34KB と同等以上を 1/19 のトークンで）。依頼の受け口検査・境界線マップの照合・完了ブロック（検査が赤い間は完了させない）・Claim Integrity（証拠を超えた完了主張の禁止）・判断の機械的回収を 2 つのフックで実装する。思想史と失敗史は docs/ へ降格し自動発火しない。主張はすべて benchmarks/ で再現可能。",
   "author": {
     "name": "shirokuma-post",
     "url": "https://github.com/shirokuma-post"
@@ -10,22 +10,22 @@
   "homepage": "https://github.com/shirokuma-post/shirokuma-dev-os",
   "repository": "https://github.com/shirokuma-post/shirokuma-dev-os",
   "keywords": [
-    "engineering-doctrine",
-    "doc-constitution",
-    "staff-officer",
-    "session-operations",
-    "guardrails",
-    "failure-catalog",
-    "intent-anchor",
     "dev-os",
+    "claim-integrity",
+    "boundaries",
+    "acceptance-criteria",
+    "hooks",
+    "quality-gate",
+    "claude-code",
     "ai-agent",
-    "governance"
+    "guardrails",
+    "decision-record"
   ],
   "skills": "./skills/",
   "interface": {
     "displayName": "Shirokuma Dev OS",
-    "shortDescription": "開発の普遍原理を束ねた governance skill 集 (6 skills)",
-    "longDescription": "思考様式6規律 (engineering-doctrine / universal 配布版)・文書運用憲法 (doc-constitution)・参謀モード指揮系統 (staff-officer)・マルチセッション運用 (session-operations)・番人と品質ゲート (guardrails) の 6 skill を単一ソースで配給する開発 governance plugin。",
+    "shortDescription": "AI が根拠以上のことを保証するのを防ぐ門番（フック 2 本 + governance 5 skills）",
+    "longDescription": "依頼の受け口検査・境界線マップの照合・完了ブロック・Claim Integrity・判断/手順の機械的回収を UserPromptSubmit / Stop の 2 フックで実装。boundary-authoring / guardrail-authoring / doc-constitution / session-operations / staff-officer の 5 skill を単一ソースで配給。主張はすべて benchmarks/ で再現可能。",
     "developerName": "shirokuma-post",
     "category": "Engineering",
     "capabilities": [

@@ -76,6 +76,13 @@
   ②裁定前に「作業限りの解釈（task-local・裁定不要）」と「普遍ルール（裁定対象）」を二分するルールを
   テンプレートへ追加 ③末尾の未検証開示文が candidate に混入する回収バグを修正
 
+## [2.0.0 codex] - 2026-07-21
+
+- **Codex 対応を 2.0 へ追随**: .codex-plugin/plugin.json を 2.0.0 に更新（旧 6 skill 記述の正典乖離を解消）。
+  hooks/hooks.json を可搬化（`${CLAUDE_PLUGIN_ROOT:-$PLUGIN_ROOT}`）し、**Codex 0.144 でもフック 2 本が発火することを live 実測**
+  （codex exec 内で intake の依頼要旨保存と stop の状態生成を確認）。
+  Codex 版は「skill 集」からフック込みの門番へ実質アップグレード
+
 ## [1.5.1] - 2026-07-11
 
 trigger eval の初 live 実測 (`claude /login` 後) と、その結果に基づく description tuning。
