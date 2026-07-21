@@ -2,7 +2,7 @@
 // ① 依頼の受け口 ＋ ② 常時 doctrine
 // UserPromptSubmit で発火。依頼を検査し、工程の判断基準を注入する。
 // 依存: node 標準ライブラリのみ。ネットワークなし。書き込みなし（読むだけ）。
-import { readFileSync, existsSync } from 'node:fs';
+import { readFileSync, existsSync, writeFileSync, mkdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { join, dirname } from 'node:path';
 
@@ -17,6 +17,20 @@ const cwd = input.cwd || process.cwd();
 
 // 無効化スイッチ（ユーザーがいつでも止められる）
 if (process.env.SHIROKUMA_DEVOS === 'off') out({});
+
+// ⑥' 判断回収の文脈保存: セッション最初の依頼の要旨を残す。
+// stop.mjs の harvest が DECISIONS.md のセッション見出しに使う。
+// 実運用フィードバック（2026-07-21）: 文脈のない candidate は裁定不能（何の作業の判断か分からない）。
+try {
+  const sid = String(input.session_id || '').slice(0, 8);
+  if (sid && prompt.trim()) {
+    const tf = join(cwd, '.claude/.devos', `${sid}.task`);
+    if (!existsSync(tf)) {
+      mkdirSync(join(cwd, '.claude/.devos'), { recursive: true });
+      writeFileSync(tf, prompt.replace(/\s+/g, ' ').trim().slice(0, 120));
+    }
+  }
+} catch {}
 
 const parts = [];
 

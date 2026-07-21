@@ -78,6 +78,8 @@ const harvest = () => {
     if (/(判断が要った|設計判断|決めた点|前提を置)/.test(line)) { cap = true; continue; }
     if (!cap) continue;
     if (/^#{1,4}\s/.test(line)) break;
+    // 開示文は判断ではない（実測 2026-07-21: 末尾の未検証開示が candidate に混入した）
+    if (/(受け入れ条件が未定義|検証されて(いない|いません)|\bnot verified\b)/i.test(line)) break;
     if (line.length > 10 && !/^\(|^（/.test(line)) picked.push(line);
     if (picked.length >= 5) break;
   }
@@ -88,9 +90,15 @@ const harvest = () => {
     + '> 承認・訂正して `adopted` にしたものだけが、以後の検査の根拠になる。\n'
     + '>\n'
     + '> **裁定を頼まれた AI へ**（実測 2026-07-21: 工程用語の一括提示は非エンジニアには裁定不能）:\n'
-    + '> 1 件ずつ・工程用語なしの「今後 AI はこうします」という帰結の平易文で提示し、\n'
-    + '> 推奨を明示して「はい（推奨）/ いいえ / 保留」の三択にすること。保留は削除しない。\n');
+    + '> 1. まず候補を二分する。**その作業限りの解釈**（この依頼をこう読んだ等）は裁定にかけず\n'
+    + '>    `status: task-local`（裁定不要・記録のみ）に畳む。**今後すべてに効く普遍ルール**だけを裁定にかける\n'
+    + '> 2. 提示は 1 件ずつ・工程用語なしの「今後 AI はこうします」という帰結の平易文で、\n'
+    + '>    「> 依頼:」の文脈（どの作業での判断か）を必ず添える\n'
+    + '> 3. 推奨を明示して「はい（推奨）/ いいえ / 保留」の三択にする。保留は削除しない\n');
+  let taskLine = '';
+  try { taskLine = readFileSync(join(dir, `${sid}.task`), 'utf8').trim(); } catch {}
   appendFileSync(file, `\n## ${sid}\n\n`
+    + (taskLine ? `> 依頼: ${taskLine}\n\n` : '')
     + picked.map((p) => `- ${p}\n  - status: candidate\n  - ratified_by: （未裁定）\n`).join(''));
   st.harvested = true; save();
   return picked.length;
