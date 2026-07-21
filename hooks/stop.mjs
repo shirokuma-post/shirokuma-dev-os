@@ -67,8 +67,41 @@ const slowWarning = gateMs > (cfg.warnSec ?? 30) * 1000
     + `\`.claude/devos.json\` の \`command\` を軽いもの（型チェックのみ等）に絞ることを検討してください。`
   : '';
 
+// ── ⑥' 手順の回収（1 セッション 1 回だけ）────────────
+// 自己改善の裁定ゲート: 生成は AI・権限は人間。adopted になるまで注入されない。
+const harvestPlays = () => {
+  if (st.playsHarvested) return 0;
+  const lines = msg.split('\n');
+  const picked = [];
+  let cap = false;
+  for (const raw of lines) {
+    const line = raw.trim().replace(/^[-*・]\s*/, '').replace(/\*\*/g, '');
+    if (/再利用できそうな手順/.test(line)) { cap = true; continue; }
+    if (!cap) continue;
+    if (/^#{1,4}\s/.test(line) || /判断が要った/.test(line)) break;
+    if (/(受け入れ条件が未定義|検証されて(いない|いません)|\bnot verified\b|^なし$)/i.test(line)) break;
+    if (line.length > 10 && !/^\(|^（/.test(line)) picked.push(line);
+    if (picked.length >= 3) break;
+  }
+  if (!picked.length) return 0;
+  const file = join(cwd, 'PLAYBOOK.md');
+  if (!existsSync(file)) writeFileSync(file,
+    '# 手順書\n\n> `status: candidate` はまだ誰も承認していない。\n'
+    + '> 承認して `adopted` にした手順だけが、以後のセッションに注入される。\n'
+    + '> 生成は AI・権限は人間（自己改善は裁定を経て初めて資産になる）。\n'
+    + '> 裁定の提示は DECISIONS.md と同じ形式（1 件ずつ・平易な帰結文・はい/いいえ/保留）。\n');
+  let taskLine = '';
+  try { taskLine = readFileSync(join(dir, `${sid}.task`), 'utf8').trim(); } catch {}
+  appendFileSync(file, `\n## ${sid}\n\n`
+    + (taskLine ? `> 依頼: ${taskLine}\n\n` : '')
+    + picked.map((p) => `- ${p}\n  - status: candidate\n  - ratified_by: （未裁定）\n`).join(''));
+  st.playsHarvested = true; save();
+  return picked.length;
+};
+
 // ── ⑥ 判断の回収（1 セッション 1 回だけ）────────────
 const harvest = () => {
+  harvestPlays();
   if (st.harvested) return 0;
   const lines = msg.split('\n');
   const picked = [];
@@ -78,6 +111,8 @@ const harvest = () => {
     if (/(判断が要った|設計判断|決めた点|前提を置)/.test(line)) { cap = true; continue; }
     if (!cap) continue;
     if (/^#{1,4}\s/.test(line)) break;
+    // 手順セクションは判断ではない（別ファイルへ回収する）
+    if (/再利用できそうな手順/.test(line)) break;
     // 開示文は判断ではない（実測 2026-07-21: 末尾の未検証開示が candidate に混入した）
     if (/(受け入れ条件が未定義|検証されて(いない|いません)|\bnot verified\b)/i.test(line)) break;
     if (line.length > 10 && !/^\(|^（/.test(line)) picked.push(line);

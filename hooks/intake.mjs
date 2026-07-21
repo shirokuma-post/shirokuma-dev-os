@@ -83,6 +83,28 @@ for (const name of ['BOUNDARIES.md', 'docs/BOUNDARIES.md', '.claude/BOUNDARIES.m
   break;
 }
 
+// ── ⑤' 裁定済みの手順書（PLAYBOOK.md）────────────────
+// 自己改善の裁定ゲート: AI が残した手順候補のうち、人間が adopted にしたものだけを注入する。
+// candidate は権限を持たない（裁定なしの学習は誤りを先例化する・実測 9-5）。
+try {
+  const pb = join(cwd, 'PLAYBOOK.md');
+  if (existsSync(pb)) {
+    const lines = readFileSync(pb, 'utf8').split('\n');
+    const adopted = [];
+    for (let i = 0; i < lines.length; i++) {
+      const m = lines[i].match(/^- (.+)$/);
+      if (m && lines.slice(i + 1, i + 3).some((l) => /status:\s*adopted/.test(l))) adopted.push(m[1]);
+    }
+    if (adopted.length) {
+      parts.push(
+        `## 裁定済みの手順書（PLAYBOOK.md）\n\n`
+        + adopted.map((p) => `- ${p}`).join('\n')
+        + `\n\n該当する作業では、この手順に従うこと。`,
+      );
+    }
+  }
+} catch {}
+
 // ── ⑥ 回収のための報告形式 ────────────────────────
 // 実測: 素材（判断の言語化）は強いモデルなら 9/9 出るが、弱いモデルは省略する。
 //       出ないものは回収できないので、形式を要求して素材を揃える。
@@ -92,7 +114,9 @@ parts.push(
   + `**判断が要った点**（依頼文からは一意に決まらず、こちらで決めたこと）\n`
   + `- 決めたこと / 選ばなかった案 / そう決めた理由\n\n`
   + `思いつかない場合も、次を自問してから「なし」と書くこと:\n`
-  + `「依頼文に書かれていないのに、自分が決めた振る舞いは本当に無いか？」\n`,
+  + `「依頼文に書かれていないのに、自分が決めた振る舞いは本当に無いか？」\n\n`
+  + `**再利用できそうな手順**（今後の似た作業でそのまま使い回せる具体的な手順が生まれた場合のみ、\n`
+  + `1〜3 行で。汎用論や感想は書かない。無ければこの見出しごと省略）\n`,
 );
 
 if (!parts.length) out({});
