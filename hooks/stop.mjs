@@ -85,7 +85,11 @@ const harvest = () => {
   const file = join(cwd, 'DECISIONS.md');
   if (!existsSync(file)) writeFileSync(file,
     '# 決定記録\n\n> `status: candidate` はまだ誰も承認していない。\n'
-    + '> 承認・訂正して `adopted` にしたものだけが、以後の検査の根拠になる。\n');
+    + '> 承認・訂正して `adopted` にしたものだけが、以後の検査の根拠になる。\n'
+    + '>\n'
+    + '> **裁定を頼まれた AI へ**（実測 2026-07-21: 工程用語の一括提示は非エンジニアには裁定不能）:\n'
+    + '> 1 件ずつ・工程用語なしの「今後 AI はこうします」という帰結の平易文で提示し、\n'
+    + '> 推奨を明示して「はい（推奨）/ いいえ / 保留」の三択にすること。保留は削除しない。\n');
   appendFileSync(file, `\n## ${sid}\n\n`
     + picked.map((p) => `- ${p}\n  - status: candidate\n  - ratified_by: （未裁定）\n`).join(''));
   st.harvested = true; save();
