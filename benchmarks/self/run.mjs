@@ -4,10 +4,11 @@
 // これが赤いとき、フックは誰かの手元で誤検知している。
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdtempSync, rmSync, readFileSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
 import { negative, positive } from './claim-integrity.fixtures.mjs';
+import { harvestCases } from './harvest.fixtures.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '../..');
 const HOOK = join(ROOT, 'hooks/stop.mjs');
@@ -34,6 +35,22 @@ for (const c of positive) {
 }
 rmSync(tmp, { recursive: true, force: true });
 
+// 判断回収（DECISIONS.md）— 判断の行は回収し、報告の締めや定型文は混入させない。
+for (const c of harvestCases) {
+  const t = mkdtempSync(join(tmpdir(), 'devos-self-harvest-'));
+  ask(c.msg, t);
+  const dec = join(t, 'DECISIONS.md');
+  const body = existsSync(dec) ? readFileSync(dec, 'utf8') : '';
+  const missed = c.mustInclude.filter((s) => !body.includes(s));
+  const leaked = c.mustExclude.filter((s) => body.includes(s));
+  if (missed.length || leaked.length) {
+    fail++;
+    if (missed.length) bad.push(`[回収漏れ] 判断の行が DECISIONS.md に無い: ${c.name}\n  → ${missed.join(' / ')}`);
+    if (leaked.length) bad.push(`[誤回収] 判断でない行が DECISIONS.md に混入: ${c.name}\n  → ${leaked.join(' / ')}`);
+  } else pass++;
+  rmSync(t, { recursive: true, force: true });
+}
+
 console.log(`自己検査: ${pass}/${pass + fail} 合格`);
 if (bad.length) { console.log('\n' + bad.join('\n')); process.exit(1); }
-console.log('  正常例を止めない / 違反例を見逃さない、を確認しました。');
+console.log('  正常例を止めない / 違反例を見逃さない / 判断だけを回収する、を確認しました。');

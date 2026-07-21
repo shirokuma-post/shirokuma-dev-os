@@ -80,6 +80,9 @@ const harvestPlays = () => {
     if (/^再利用できそうな手順/.test(line)) { cap = true; continue; }
     if (!cap) continue;
     if (/^#{1,4}\s/.test(line) || /判断が要った/.test(line)) break;
+    // 「次のアクション」以降と裁定 UX の定型文は手順ではない（判断回収と同じ欠陥クラス）
+    if (/^次のアクション/.test(line)) break;
+    if (/決めてほしいことが\s*\d+\s*件/.test(line)) break;
     if (/(受け入れ条件が未定義|検証されて(いない|いません)|\bnot verified\b|^なし$)/i.test(line)) break;
     if (line.length > 10 && !/^\(|^（/.test(line)) picked.push(line);
     if (picked.length >= 3) break;
@@ -115,6 +118,11 @@ const harvest = () => {
     if (/^#{1,4}\s/.test(line)) break;
     // 手順セクションは判断ではない（別ファイルへ回収する）
     if (/再利用できそうな手順/.test(line)) break;
+    // 「次のアクション」以降は報告の締めであって判断ではない
+    // （実測 2026-07-22: shirokuma_SaaS/DECISIONS.md 8c6cc3a0・81e448e4 で candidate に混入した）
+    if (/^次のアクション/.test(line)) break;
+    // 裁定 UX の定型文（「決めてほしいことが N 件あります」）は案内文であって判断ではない
+    if (/決めてほしいことが\s*\d+\s*件/.test(line)) break;
     // 開示文は判断ではない（実測 2026-07-21: 末尾の未検証開示が candidate に混入した）
     if (/(受け入れ条件が未定義|検証されて(いない|いません)|\bnot verified\b)/i.test(line)) break;
     if (line.length > 10 && !/^\(|^（/.test(line)) picked.push(line);
