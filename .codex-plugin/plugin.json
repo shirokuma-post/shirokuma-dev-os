@@ -1,6 +1,6 @@
 {
   "name": "shirokuma-dev-os",
-  "version": "2.0.0",
+  "version": "2.0.0+codex.20260722051650",
   "description": "能力にばらつきのある AI でも、開発工程だけは揃えるための門番。常時ロードは 2,000 字（実測: 34KB と同等以上を 1/19 のトークンで）。依頼の受け口検査・境界線マップの照合・完了ブロック（検査が赤い間は完了させない）・Claim Integrity（証拠を超えた完了主張の禁止）・判断の機械的回収を 2 つのフックで実装する。思想史と失敗史は docs/ へ降格し自動発火しない。主張はすべて benchmarks/ で再現可能。",
   "author": {
     "name": "shirokuma-post",
@@ -31,6 +31,11 @@
     "capabilities": [
       "Read"
     ],
-    "websiteURL": "https://github.com/shirokuma-post/shirokuma-dev-os"
+    "websiteURL": "https://github.com/shirokuma-post/shirokuma-dev-os",
+    "defaultPrompt": [
+      "この依頼を北極星・受入条件・境界線に照らし、不足を実装前に確認して進めて。",
+      "この完了主張が証拠を超えていないか、検査結果と残存リスクで確認して。",
+      "今回の失敗を不変条件へ翻訳し、再発を止める自動ガードに変えて。"
+    ]
   }
 }
