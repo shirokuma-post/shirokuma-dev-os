@@ -161,13 +161,24 @@ const SPECIFIC = /(npm |yarn |pnpm |tsc|jest|vitest|pytest|`[^`]+`\s*[:：])/;
 // 引用は主張ではない（実測 2026-07-21: 誤検知の発火語を引用した報告が再ブロックされ、書き直しが空転した）。
 // 主張判定の前に 「」『』・backtick 内を除去する。SPECIFIC だけは原文を見る（`cmd`: 形式の事実表記を拾うため）。
 const QUOTED = /「[^」]*」|『[^』]*』|`[^`]*`/g;
+// 主張ではない構文（実運用 3 日分の実測 2026-07-24: 差し戻し上限に達した 4 セッションの主因）。
+// 共通の型は「主語が成果物でない完了語」。判定前に除去する。
+//   ① データ値      status=completed / conclusion: success（API の出力であって完了主張ではない）
+//   ② 行為の完了    調査完了・実測完了（行為は終わったが、成果物の検証済み主張ではない）
+//                   ※ 実装完了・移行完了は成果物の主張なので除外しない
+//   ③ 条件付きの見立て 〜なら/れば … 問題なし（仮定であって保証ではない）
+const NOT_CLAIM = new RegExp([
+  '[\\w.-]+\\s*[=:]\\s*(completed?|success|done|failed?)\\b',
+  '(調査|確認|分析|実測|読み取り|計測|精査|抽出|集計)完了',
+  '(れば|なら|たら|ならば)[^。]{0,40}(問題な(し|く)|完了です)',
+].join('|'), 'g');
 // 「〜のが安全です」等の推奨表現は、成果物への保証ではない（実測 2026-07-21: 委ね先の推奨で C3 誤判定）。
 const C3 = /(問題ありません|問題なし|(?<!のが|ほうが|方が)安全です|保証します|万全)|(\bno issues\b|\ball (tests|checks) pass|\bfully (working|verified)|\bis safe\b|\bguarantee)/i;
 const C3b = /(完了しました|完了です|全て通りました|すべて通りました)|(\b(all )?done\b|\bcompleted?\b|\beverything (works|passes))/i;
 const C2 = /(動作を確認しました|検証しました|確認済みです|問題なく動作)|(\bverified\b|\bconfirmed working\b|\btested and working\b|\bvalidated\b)/i;
 const C1 = /(実装しました|修正しました|作成しました|変更しました|通過|通りました)|(\bimplemented\b|\bfixed\b|\bcreated\b|\bupdated\b|\bpassed\b)/i;
 const claimLevel = () => {
-  const t = msg.replace(QUOTED, '');
+  const t = msg.replace(QUOTED, '').replace(NOT_CLAIM, '');
   if (C3.test(t)) return 3;
   if (C3b.test(t)) return 3;
   // 一般的な検証主張。ただし検査対象を明示していれば事実として扱う
