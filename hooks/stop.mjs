@@ -175,7 +175,15 @@ const NOT_CLAIM = new RegExp([
 // 「〜のが安全です」等の推奨表現は、成果物への保証ではない（実測 2026-07-21: 委ね先の推奨で C3 誤判定）。
 const C3 = /(問題ありません|問題なし|(?<!のが|ほうが|方が)安全です|保証します|万全)|(\bno issues\b|\ball (tests|checks) pass|\bfully (working|verified)|\bis safe\b|\bguarantee)/i;
 const C3b = /(完了しました|完了です|全て通りました|すべて通りました)|(\b(all )?done\b|\bcompleted?\b|\beverything (works|passes))/i;
-const C2 = /(動作を確認しました|検証しました|確認済みです|問題なく動作)|(\bverified\b|\bconfirmed working\b|\btested and working\b|\bvalidated\b)/i;
+// 「確認」は日本語の汎用語で、外部の事実（デプロイ状態・レコードの実在）にも広く使う。
+// 裁定（2026-07-24・しろくまさん）: **Claim Integrity は成果物を主語とする主張に限る**。
+// よって確認系は成果物名詞を伴う形だけを C2 とし、裸の「確認済みです」は事実報告（C1）として扱う。
+// 「検証しました」「問題なく動作」は語自体が成果物への主張なので無条件で C2。
+const DELIVERABLE = '(動作|挙動|仕様|機能|実装|修正|成果物)';
+const C2 = new RegExp(
+  `${DELIVERABLE}(を|は|も)?\\s*(既に|すでに)?\\s*(確認しました|確認済みです|確認できました)`
+  + '|検証しました|問題なく動作'
+  + '|\\bverified\\b|\\bconfirmed working\\b|\\btested and working\\b|\\bvalidated\\b', 'i');
 const C1 = /(実装しました|修正しました|作成しました|変更しました|通過|通りました)|(\bimplemented\b|\bfixed\b|\bcreated\b|\bupdated\b|\bpassed\b)/i;
 const claimLevel = () => {
   const t = msg.replace(QUOTED, '').replace(NOT_CLAIM, '');
