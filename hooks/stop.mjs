@@ -96,11 +96,20 @@ const harvestPlays = () => {
     + '> 裁定の提示は DECISIONS.md と同じ形式（1 件ずつ・平易な帰結文・はい/いいえ/保留）。\n');
   let taskLine = '';
   try { taskLine = readFileSync(join(dir, `${sid}.task`), 'utf8').trim(); } catch {}
+  // 判断の回収と同じ規律: 既定は task-local（記録のみ）・★ が付いた手順だけ candidate
+  let askedPlays = 0;
   appendFileSync(file, `\n## ${sid}\n\n`
     + (taskLine ? `> 依頼: ${taskLine}\n\n` : '')
-    + picked.map((p) => `- ${p}\n  - status: candidate\n  - ratified_by: （未裁定）\n`).join(''));
+    + picked.map((p) => {
+      const universal = /^[★*＊]\s*/.test(p);
+      if (universal) askedPlays += 1;
+      return `- ${p.replace(/^[★*＊]\s*/, '')}\n`
+        + (universal
+          ? '  - status: candidate\n  - ratified_by: （未裁定）\n'
+          : '  - status: task-local（その作業限りの手順。記録のみ・裁定不要）\n  - ratified_by: 不要\n');
+    }).join(''));
   st.playsHarvested = true; save();
-  return picked.length;
+  return askedPlays;
 };
 
 // ── ⑥ 判断の回収（1 セッション 1 回だけ）────────────
@@ -123,6 +132,9 @@ const harvest = () => {
     if (/^次のアクション/.test(line)) break;
     // 裁定 UX の定型文（「決めてほしいことが N 件あります」）は案内文であって判断ではない
     if (/決めてほしいことが\s*\d+\s*件/.test(line)) break;
+    // 「発見」「補足」等の別セクション見出しで打ち切る（実測 2026-07-24: 見出しの断片と
+    // その配下の観察が candidate に混入し、判断でないものを人に聞いていた）
+    if (/^(発見|補足|注記|参考|残作業|所感|備考)[（(：:\s]/.test(line)) break;
     // 開示文は判断ではない（実測 2026-07-21: 末尾の未検証開示が candidate に混入した）
     if (/(受け入れ条件が未定義|検証されて(いない|いません)|\bnot verified\b)/i.test(line)) break;
     if (line.length > 10 && !/^\(|^（/.test(line)) picked.push(line);
@@ -131,22 +143,33 @@ const harvest = () => {
   if (!picked.length) return 0;
   const file = join(cwd, 'DECISIONS.md');
   if (!existsSync(file)) writeFileSync(file,
-    '# 決定記録\n\n> `status: candidate` はまだ誰も承認していない。\n'
+    '# 決定記録\n\n> `status: task-local` = その作業限りの判断。記録のみで、人には聞かない。\n'
+    + '> `status: candidate` = 今後すべてに効く普遍ルールの候補。人の答えを待っている。\n'
     + '> 承認・訂正して `adopted` にしたものだけが、以後の検査の根拠になる。\n'
     + '>\n'
-    + '> **裁定を頼まれた AI へ**（実測 2026-07-21: 工程用語の一括提示は非エンジニアには裁定不能）:\n'
-    + '> 1. まず候補を二分する。**その作業限りの解釈**（この依頼をこう読んだ等）は裁定にかけず\n'
-    + '>    `status: task-local`（裁定不要・記録のみ）に畳む。**今後すべてに効く普遍ルール**だけを裁定にかける\n'
+    + '> **裁定を頼まれた AI へ**（実測 2026-07-21/24: 工程用語の一括提示・目先の実装細部は裁定不能）:\n'
+    + '> 1. 見るのは `candidate` だけ。`task-local` は聞かない（分類は報告時に済んでいる）\n'
     + '> 2. 提示は 1 件ずつ・工程用語なしの「今後 AI はこうします」という帰結の平易文で、\n'
     + '>    「> 依頼:」の文脈（どの作業での判断か）を必ず添える\n'
     + '> 3. 推奨を明示して「はい（推奨）/ いいえ / 保留」の三択にする。保留は削除しない\n');
   let taskLine = '';
   try { taskLine = readFileSync(join(dir, `${sid}.task`), 'utf8').trim(); } catch {}
+  // 既定は task-local（記録のみ・人に聞かない）。★ が付いた行だけを candidate にする。
+  // 裁定（2026-07-24・しろくまさん）: 目先の実装細部まで人に聞くのはストレスでしかない。
+  // 分類は文脈が最も濃い「報告を書いた瞬間」に前倒しする（後から人間が仕分けない）。
+  let asked = 0;
   appendFileSync(file, `\n## ${sid}\n\n`
     + (taskLine ? `> 依頼: ${taskLine}\n\n` : '')
-    + picked.map((p) => `- ${p}\n  - status: candidate\n  - ratified_by: （未裁定）\n`).join(''));
+    + picked.map((p) => {
+      const universal = /^[★*＊]\s*/.test(p);
+      if (universal) asked += 1;
+      return `- ${p.replace(/^[★*＊]\s*/, '')}\n`
+        + (universal
+          ? '  - status: candidate\n  - ratified_by: （未裁定）\n'
+          : '  - status: task-local（その作業限りの判断。記録のみ・裁定不要）\n  - ratified_by: 不要\n');
+    }).join(''));
   st.harvested = true; save();
-  return picked.length;
+  return asked;   // 人に届ける件数 = ★ の数だけ
 };
 
 // ── Claim Integrity ─────────────────────────────

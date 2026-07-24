@@ -53,4 +53,45 @@ export const harvestCases = [
     mustInclude: ['決めたこと = flex コンテナに wrap を指定して折返しを許可した'],
     mustExclude: ['決めてほしいことが'],
   },
+  // 2026-07-24 しろくまさん裁定「目先の判断ばかり聞かれるのはストレス」への構造修正。
+  // 既定を task-local（記録のみ・聞かない）に反転し、★ が付いた行だけ candidate にする。
+  // 分類は文脈が最も濃い「報告を書いた瞬間」に前倒しする（後から人間が仕分けない）。
+  {
+    name: '★なしの実装細部は task-local（人に聞かない）',
+    msg: [
+      'MV テーブルの migration を作成しました。',
+      '',
+      '**判断が要った点**',
+      '- user_id を profiles.id 経由でなく auth.users(id) 直参照にした。理由 = 既存テーブルの慣習に揃えた',
+      '- updated_at は moddatetime 拡張を使わず自前トリガ関数で実装した（本番への拡張追加を避けるため）',
+    ].join('\n'),
+    mustInclude: ['auth.users(id) 直参照', 'status: task-local'],
+    mustExclude: ['status: candidate'],
+  },
+  {
+    name: '★付きの普遍ルールだけが candidate になる',
+    msg: [
+      '境界の実装方針を決めました。',
+      '',
+      '**判断が要った点**',
+      '- 変数名を camelCase に揃えた。理由 = 既存ファイルの慣習',
+      '- ★ 代理店スタッフには配下店舗のデータを一切見せない方針で実装した。事業判断のため確認が要る',
+    ].join('\n'),
+    mustInclude: ['status: candidate', '代理店スタッフには配下店舗のデータを一切見せない'],
+    mustExclude: [],
+  },
+  {
+    name: '見出しの断片は回収しない（実例「発見（scope外・報告のみ）」）',
+    msg: [
+      'RLS ポリシーを追加しました。',
+      '',
+      '**判断が要った点**',
+      '- 決めたこと = テナント境界を USING と WITH CHECK の両方に書いた',
+      '',
+      '**発見（scope外・報告のみ）**',
+      '- 既存の security definer 関数群に WARN が多数出ていますが、すべて今回の変更と無関係の既存資産です',
+    ].join('\n'),
+    mustInclude: ['USING と WITH CHECK の両方に書いた'],
+    mustExclude: ['発見（scope外', 'security definer'],
+  },
 ];

@@ -40,7 +40,10 @@ for (const c of harvestCases) {
   const t = mkdtempSync(join(tmpdir(), 'devos-self-harvest-'));
   ask(c.msg, t);
   const dec = join(t, 'DECISIONS.md');
-  const body = existsSync(dec) ? readFileSync(dec, 'utf8') : '';
+  // ヘッダーの説明文（status: candidate 等の語を含む）は判定対象外。回収された本文だけを見る。
+  const raw = existsSync(dec) ? readFileSync(dec, 'utf8') : '';
+  const i = raw.indexOf('\n## ');
+  const body = i >= 0 ? raw.slice(i) : '';
   const missed = c.mustInclude.filter((s) => !body.includes(s));
   const leaked = c.mustExclude.filter((s) => body.includes(s));
   if (missed.length || leaked.length) {
