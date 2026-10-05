@@ -21,23 +21,47 @@ if (process.env.SHIROKUMA_DEVOS === 'off') out({});
 // ⑥' 判断回収の文脈保存: セッション最初の依頼の要旨を残す。
 // stop.mjs の harvest が DECISIONS.md のセッション見出しに使う。
 // 実運用フィードバック（2026-07-21）: 文脈のない candidate は裁定不能（何の作業の判断か分からない）。
+// 同じ .task の有無が「セッション最初の依頼か」の判定にもなる（下の注入量の切替で使う）。
+let firstTurn = true;
+let turn = 0;
 try {
   const sid = String(input.session_id || '').slice(0, 8);
   if (sid && prompt.trim()) {
-    const tf = join(cwd, '.claude/.devos', `${sid}.task`);
-    if (!existsSync(tf)) {
-      mkdirSync(join(cwd, '.claude/.devos'), { recursive: true });
+    const dir = join(cwd, '.claude/.devos');
+    const tf = join(dir, `${sid}.task`);
+    if (existsSync(tf)) {
+      firstTurn = false;
+    } else {
+      mkdirSync(dir, { recursive: true });
       writeFileSync(tf, prompt.replace(/\s+/g, ' ').trim().slice(0, 120));
     }
+    const cf = join(dir, `${sid}.turns`);
+    try { turn = Number(readFileSync(cf, 'utf8')) || 0; } catch {}
+    turn += 1;
+    writeFileSync(cf, String(turn));
   }
 } catch {}
+
+// ── 注入量の切替（2026-10-06 しろくま決定「やりましょう」）─────────
+// 実測: 全文 7,624 字（≒5,900 token）を毎プロンプト注入していた。
+// 長い常駐セッションでは他セッションからの連絡・タスク完了通知も 1 プロンプトとして数えられ、
+// 同じ全文が履歴に数百回積まれる（1 セッションで 3,888 回）。
+// 規律は「最初の依頼で読ませる」ことで効く（宣言は最初の応答の冒頭で求めている）ので、
+// 全文は最初の依頼だけ。以後の人間の依頼には要点だけを付け、機械が送った連絡には何も付けない。
+// 文脈の圧縮で全文が消えるので、REFRESH 回ごとに全文を出し直す。
+const REFRESH = 25;
+const MACHINE = [
+  '<cross-session-message', '<task-notification', '<ci-monitor-event',
+  'Another Claude session sent a message',
+];
+const fromMachine = MACHINE.some((m) => prompt.includes(m));
+const full = firstTurn || turn % REFRESH === 1;
 
 const parts = [];
 
 // ── ② 常時 doctrine（2,000字）──────────────────────
 // 実測: Haiku 圧力条件の逸脱率 6/6 → 0/6、+3.1% token
 const core = join(ROOT, 'doctrine/core-2000.md');
-if (existsSync(core)) parts.push(readFileSync(core, 'utf8'));
 
 // ── ① 圧力語彙の検出 ─────────────────────────────
 // 実測: 汚染の入口は既存コードでも AI の自発でもなく「依頼の圧力」だった
@@ -45,7 +69,14 @@ const PRESSURE = [
   'とりあえず', '雑で', '後で直', 'あとで直', '急ぎ', '急いで', '一旦', '仮で',
   '動けばいい', '動けば良い', '簡単でいい', 'ざっくり', '最低限でいい', '詳細はまた',
 ];
-const hit = PRESSURE.filter((w) => prompt.includes(w));
+const hit = fromMachine ? [] : PRESSURE.filter((w) => prompt.includes(w));
+
+// 機械が送った連絡（最初の依頼を除く）には何も付けない
+if (!full && fromMachine) out({});
+
+// doctrine は全文の回と、圧力語が出た回だけ（効果の実測は圧力条件下）
+if ((full || hit.length) && existsSync(core)) parts.push(readFileSync(core, 'utf8'));
+
 if (hit.length) {
   parts.push(
     `## 受け口の検査\n\n`
@@ -62,6 +93,16 @@ if (hit.length) {
 for (const name of ['BOUNDARIES.md', 'docs/BOUNDARIES.md', '.claude/BOUNDARIES.md']) {
   const p = join(cwd, name);
   if (!existsSync(p)) continue;
+  if (!full) {
+    // 2 回目以降の依頼: 宣言と停止条件だけ。本文は最初の依頼で読ませ済み
+    parts.push(
+      `## 境界線マップ（${name}）\n\n`
+      + `作業の範囲が変わったら、3 行の宣言（属する境界 / 可否の記載 / 判断）を出し直す。\n`
+      + `境界に関わるのにマップに可否が無ければ、着手せず停止して確認する（型や既存コードから推定しない）。\n`
+      + `本文が要るときは ${name} を読む。`,
+    );
+    break;
+  }
   // 文言強化（2026-07-21 E2' 実測）: 旧文言では昇格が Sonnet 1/6・Haiku 0/6。
   // 非昇格 run は全て「マップを読み・境界を認識し・型定義から可否を推定して」進んだ。
   // 効く要素は実測済みの 3 つ — 宣言の出力要求（照合 Anchor: 誤成功 4/11 → 0/11）・
@@ -86,7 +127,7 @@ for (const name of ['BOUNDARIES.md', 'docs/BOUNDARIES.md', '.claude/BOUNDARIES.m
 // ── ⑤' 裁定済みの手順書（PLAYBOOK.md）────────────────
 // 自己改善の裁定ゲート: AI が残した手順候補のうち、人間が adopted にしたものだけを注入する。
 // candidate は権限を持たない（裁定なしの学習は誤りを先例化する・実測 9-5）。
-try {
+if (full) try {
   const pb = join(cwd, 'PLAYBOOK.md');
   if (existsSync(pb)) {
     const lines = readFileSync(pb, 'utf8').split('\n');
@@ -109,7 +150,7 @@ try {
 // 実測: 素材（判断の言語化）は強いモデルなら 9/9 出るが、弱いモデルは省略する。
 //       出ないものは回収できないので、形式を要求して素材を揃える。
 // 順序と開示頻度は実運用フィードバック（2026-07-21）: 大事な結果が末尾の定型に埋もれない順に。
-parts.push(
+if (full) parts.push(
   `## 完了報告の形式\n\n`
   + `**書く順序**（この順を守る。大事なものを定型で埋もれさせない）:\n\n`
   + `1. **結果** — 何がどうなったか。冒頭に置く\n`
@@ -136,7 +177,7 @@ parts.push(
 // ── ⑧ 裁定待ちの可視化 ─────────────────────────
 // 実運用フィードバック（2026-07-21）: 「いつ裁定が来るのか分からない」。
 // 裁定は「溜まったら来る」ではなく「呼んだら来る」。溜まっても壊れないが、見えるようにする。
-try {
+if (full) try {
   const countC = (f) => {
     // 行頭の実エントリだけ数える（ヘッダ説明文の `status: candidate` を誤カウントしない）
     try { return (readFileSync(join(cwd, f), 'utf8').match(/^\s+- status:\s*candidate/gm) || []).length; }
