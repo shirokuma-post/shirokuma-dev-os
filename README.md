@@ -328,6 +328,7 @@ as any → as X as Y / eslint-disable → （駆逐）→ 機能を削る
 |---|---|
 | `boundary-authoring` | `BOUNDARIES.md` を新規に作る / 境界を見直す時のみ |
 | `guardrail-authoring` | CI・フック・検出器を書く / 変更する時のみ |
+| `breach-resilience` | 鍵・ログイン・開発権限が奪われた前提で、届く範囲と止め方を点検する / 侵害時の手順書・鍵の作り直しを設計する時のみ |
 | `doc-constitution` | プロジェクト文書そのものを作る / 正典の食い違いを裁定する時のみ |
 | `session-operations` | 複数セッションが同じ repo を同時に触る時のみ |
 | `staff-officer` | 独立した作業 lane が 2 以上ある時のみ（**適用領域で未測定**） |

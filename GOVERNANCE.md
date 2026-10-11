@@ -10,7 +10,7 @@
 > - **第 1 層（2.0 で降格）** = `docs/doctrine-full.md`。作者の n=1 経験則と思想史。**自動発火しない on-demand 資料**
 > - **常時ロード層（2.0 で新設）** = `doctrine/core-2000.md`（1,956 字）。実測で 34KB と同等以上を +3.1% のトークンで
 >   （技術スタック前提・実戦の具体例を含む）。外部読者には「規律がどんな失敗から生まれたか」を示す**実例集**として価値がある。
-> - **第 2 層（発火条件を狭めた skill 群）** = `boundary-authoring` + `doc-constitution` + `staff-officer` + `session-operations` + `guardrail-authoring`。
+> - **第 2 層（発火条件を狭めた skill 群）** = `boundary-authoring` + `doc-constitution` + `staff-officer` + `session-operations` + `guardrail-authoring` + `breach-resilience`。
 >   固有名・スタック前提を剥いた普遍核。**外部プロジェクトで実際に発火させるのはこちら**。
 >   （`guardrail-authoring` = 番人と品質ゲート。失敗カタログ + CI/番人雛形で「番人を緩めない」を実装として配給する層）
 > 迷ったら: 読み物としては両層、運用に組み込むのは第 2 層 + templates。
@@ -47,6 +47,7 @@
 | 参謀フロー（5層 × 4ライン・検品・ゲート・振り返り） | **親**: `skills/staff-officer`（振り返り 5 軸の雛形 = `templates/RETROSPECTIVE.template.md`） |
 | マルチセッション運用（1ドメイン1セッション/起動/撤退/handoff） | **親**: `skills/session-operations` |
 | 番人と品質ゲート（失敗カタログ + CI/番人雛形） | **親**: `skills/guardrail-authoring` |
+| 侵害時耐性（奪われた後の届く範囲・止め方・鍵の移行の段取り・固定点検） | **親**: `skills/breach-resilience` |
 | 不変ルールの普遍部（セキュリティ核/性能核/…） | **親**: `templates/INVARIANTS.template.md` |
 | プロジェクトの北極星・指揮系統の骨 | **親**: `templates/CLAUDE.template.md` |
 | 製品名・project ID・URL・team・鍵名 | **子**: 各プロジェクトの `CLAUDE.md` / `INVARIANTS.md` |

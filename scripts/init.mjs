@@ -484,6 +484,7 @@ async function main() {
   console.log(`   - staff-officer                  (= 参謀フロー 5 層 × 4 ライン)`);
   console.log(`   - session-operations             (= マルチセッション運用の型)`);
   console.log(`   - guardrail-authoring            (= 検出器・CI・品質ゲートを書く時のみ)
+   - breach-resilience              (= 奪われた後の届く範囲と止め方を点検する時のみ)
    - boundary-authoring             (= 境界線マップの聞き取り)`);
 
   if (args.dryRun) {

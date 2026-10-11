@@ -78,3 +78,6 @@
 {"id":"ovl-10","category":"overlap","expected_skills":["engineering-doctrine","guardrails"],"prompt":"本番障害の根本原因を実測で特定して、恒久対策として CI に番人を入れるところまでやり切って","rationale":"根源 + 実測 + 番人追加"}
 {"id":"ovl-11","category":"overlap","expected_skills":["doc-constitution","guardrails"],"prompt":"ドキュメントの重複記述を整理して、これを機に doc の壊れ (リンク切れ・重複) を検出する lint も CI に入れたい","rationale":"doc 整理 + doc lint 番人"}
 {"id":"ovl-12","category":"overlap","expected_skills":["session-operations","staff-officer"],"prompt":"他セッションが触った形跡のあるモジュールに対して、複数ファイルにまたがる機能追加をやることになった。安全に進めて","rationale":"他セッション痕跡 + 複数ファイル実装"}
+{"id": "pos-breach-01", "category": "positive", "expected_skills": ["breach-resilience"], "prompt": "Vercel の token や GitHub の token が漏れたら、本番のどこまで届くか・どう止めるかを洗い出して手順書にしたい", "rationale": "奪われた前提で届く範囲と止め方を点検し runbook を作る = breach-resilience の中核"}
+{"id": "pos-breach-02", "category": "positive", "expected_skills": ["breach-resilience"], "prompt": "Supabase の service_role を新しい型の secret key に移したい。本番を止めずに段階的に切り替える段取りを作って", "rationale": "鍵の型の移行・作り直しの段取り = breach-resilience の references/key-migration-stages"}
+{"id": "neg-breach-01", "category": "negative", "expected_skills": [], "prompt": "この API route に SQL インジェクションの穴がないかレビューして", "rationale": "コードの脆弱性探しは穴探しの監査であって、侵害後の耐性点検ではない"}

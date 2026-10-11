@@ -19,6 +19,7 @@
     "claude-code",
     "ai-agent",
     "guardrails",
+    "breach-resilience",
     "decision-record"
   ]
 }
