@@ -58,6 +58,7 @@ codex exec -C "$RUN" -s workspace-write --skip-git-repo-check -o "$RUN/out/last.
 - 置き場所: $RUN/out/attack_P<番号>.<拡張子> (1 約束 1 file)。$RUN/out/ 以外には書かない
 - 最初に、使い捨ての環境でなければ失敗する関門を置く (<関門の形>)
 - 破れたら 'BROKEN P<n>: <理由>'、破れなければ 'HELD P<n>' を出す。権限で拒否された手筋は HELD として次へ進む
+- 1 つでも BROKEN が出たら、0 以外の終了コードで終える (CI に取り込んだ時に赤になるように)
 - 約束ごとに手筋を複数試す (直接呼ぶ・引数を偽る・重複や空や NULL を混ぜる・役を変える・身元の情報に他人の値を混ぜる 等)
 - 何も書き換えずに終わる形にする (トランザクションなら必ず巻き戻す)
 - 試した手筋を $RUN/out/notes.md に 1 行ずつ書く" < /dev/null
@@ -70,6 +71,8 @@ codex exec -C "$RUN" -s workspace-write --skip-git-repo-check -o "$RUN/out/last.
 
 1. `out/` の全ファイルを読む（縛り 5）。関門が無い file は走らせない。
 2. 使い捨ての環境で 1 本ずつ流し、`HELD` / `BROKEN` / エラーを数える。
+   - 終了コードも見る。`BROKEN` を出しても 0 で終わる試験は、CI に取り込む前に直す (2026-10-20 実例: Firestore の試験が BROKEN 7 件で exit 0)。
+   - 関門は両向きで試す: 外の接続先・本番に見立てた状態 (データ 1 件) で止まり、その時に何も書き換えていないこと。
 3. エラーは読み分ける: 試験の書き損じか、守りの穴か。権限で止まったのは HELD でよいが、どの権限で止まったかは確かめる。
 
 ### 4. 破れたら直す（守り役）
@@ -109,6 +112,8 @@ codex exec -C "$RUN" -s workspace-write --skip-git-repo-check -o "$RUN/out/last.
 | MySQL / MariaDB の利用者ごとの権限・ビュー | `references/mysql.md` |
 | Firebase のセキュリティルール（Firestore / Realtime Database / Storage） | `references/firebase.md` |
 | アプリのコード（API のミドルウェア・ORM の絞り込み）。DB 側に守りが無い時 | `references/http-app.md` |
+
+4 枚とも 2026-10-20 に実地で 1 回ずつ回した（約束 4〜6・破れた 0・守りを 1 か所ずつ外したミューテーションで全件赤）。各ファイル冒頭に実測の内容を書いている。
 
 守りが DB とアプリの両方にあるなら、両方で回す。DB 側が守れていてもアプリが管理者の鍵で DB を叩いていれば、守りの本体はアプリ側にある。
 
