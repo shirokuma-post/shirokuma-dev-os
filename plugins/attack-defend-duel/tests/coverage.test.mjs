@@ -124,3 +124,16 @@ test('default catalog (the real promises.md) has no P items', (t) => {
   assert.equal(result.status, 0, result.stderr);
   assert.equal(row(result.stdout.split('\n\n')[1], 'P1'), undefined);
 });
+
+test('一覧の番号の無い古い形の約束は、[ ] を付けるよう言って 2 で止まる', (t) => {
+  const result = run(t, '- P1: 他テナントの行は見えない');
+  assert.equal(result.status, 2);
+  assert.match(result.stderr, /1行: 書式が不正です — 一覧の番号が無い/);
+  assert.match(result.stderr, /- P1 \[A1,A4\]/);
+});
+test('それ以外の書式の誤りは、正しい形を示して 2 で止まる', (t) => {
+  const result = run(t, '- P1 A1: 括弧が無い');
+  assert.equal(result.status, 2);
+  assert.match(result.stderr, /`- P<番号> \[一覧の番号,…\]: 約束`/);
+  assert.doesNotMatch(result.stderr, /一覧の番号が無い/);
+});

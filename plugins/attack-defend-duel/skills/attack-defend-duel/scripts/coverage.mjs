@@ -39,7 +39,13 @@ async function main(args) {
   for (const [index, line] of promisesText.split(/\r?\n/).entries()) {
     if (!/^\s*(?:[-*+]\s+)?(?:P\d|当てはまらない)/.test(line)) continue;
     const match = line.match(/^\s*-\s+(P[1-9]\d*|当てはまらない)\s+\[([^\]]+)\]:\s*(\S.*?)\s*$/);
-    if (!match) throw new Error(`promises.md ${index + 1}行: 書式が不正です`);
+    if (!match) {
+      // 一覧の番号 [...] の無い古い形 (v1.2.0 より前) は、何を足せばよいかまで言う
+      const hint = /^\s*-\s+(P[1-9]\d*|当てはまらない)\s*:/.test(line)
+        ? '一覧の番号が無い。`- P1 [A1,A4]: …` のように、確かめる一覧の項目を [ ] で付ける (references/promises.md の「約束の書き方」)'
+        : '`- P<番号> [一覧の番号,…]: 約束` か `- 当てはまらない [一覧の番号,…]: 理由` の形にする';
+      throw new Error(`promises.md ${index + 1}行: 書式が不正です — ${hint}`);
+    }
     const [, id, list, description] = match;
     const ids = list.split(',').map((item) => item.trim());
     if (new Set(ids).size !== ids.length) throw new Error(`${id}: 一覧の番号が重複しています`);

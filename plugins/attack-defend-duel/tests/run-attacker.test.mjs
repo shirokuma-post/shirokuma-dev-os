@@ -93,3 +93,65 @@ test('攻め役は標準入力を閉じて起動し、終了コードをその�
     rmSync(d, { recursive: true, force: true });
   }
 });
+
+function mkRun(withJudge = false) {
+  const d = mkdtempSync(path.join(tmpdir(), 'duel-'));
+  mkdirSync(path.join(d, 'bin'));
+  mkdirSync(path.join(d, 'run', 'in'), { recursive: true });
+  mkdirSync(path.join(d, 'run', 'out'));
+  writeFileSync(path.join(d, 'run', 'in', 'promises.md'), '- P1 [A1]: x\n');
+  if (withJudge) writeFileSync(path.join(d, 'run', 'out', 'judge.log'), 'ERROR P1: 陽性対照が通らない\n');
+  return d;
+}
+
+test('--retry は直しの雛形を使い、judge.log が無ければ起動しない', () => {
+  const d = mkRun();
+  try {
+    const run1 = path.join(d, 'run');
+    assert.equal(run([run1, '--retry', '--print']).status, 2);
+    writeFileSync(path.join(run1, 'out', 'judge.log'), 'ERROR P1: x\n');
+    const r = run([run1, '--retry', '--print']);
+    assert.equal(r.status, 0, r.stderr);
+    assert.ok(r.stdout.includes(path.join(run1, 'out', 'judge.log')));
+    assert.match(r.stdout, /手筋を減らさない/);
+    assert.equal(run([run1, 'G', '--retry', '--print']).status, 2);
+  } finally {
+    rmSync(d, { recursive: true, force: true });
+  }
+});
+
+test('直しの雛形は 書く場所の限定・約束を変えない・判定と終了コードを保つ を持つ', () => {
+  const t = readFileSync(path.join(skill, 'scripts', 'attack-retry.txt'), 'utf8');
+  for (const w of ['{{RUN}}/out/ 以外には書かない', '約束', '変えない', '試す手筋を減らさない', '0 以外の終了', '陽性対照']) assert.ok(t.includes(w), `直しの雛形に無い: ${w}`);
+});
+
+function fakeRun(d, script) {
+  writeFileSync(path.join(d, 'bin', 'codex'), `#!/bin/sh\n${script}\n`, { mode: 0o755 });
+  return spawnSync(process.execPath, [path.join(skill, 'scripts', 'run-attacker.mjs'), path.join(d, 'run'), 'G'], {
+    encoding: 'utf8',
+    env: { ...process.env, PATH: `${path.join(d, 'bin')}:${process.env.PATH}` },
+  });
+}
+
+test('攻め役が out/ の外に書いたら、名指しして 3 で終わる', () => {
+  const d = mkRun();
+  try {
+    const r = fakeRun(d, `echo x > "${path.join(d, 'run', 'DECISIONS.md')}"; echo y > "${path.join(d, 'run', 'out', 'attack_P1.mjs')}"; exit 0`);
+    assert.equal(r.status, 3, r.stderr);
+    assert.match(r.stderr, /DECISIONS\.md/);
+    assert.doesNotMatch(r.stderr, /attack_P1/);
+  } finally {
+    rmSync(d, { recursive: true, force: true });
+  }
+});
+
+test('攻め役が out/ の中だけに書いたら 0 のまま', () => {
+  const d = mkRun();
+  try {
+    const r = fakeRun(d, `echo y > "${path.join(d, 'run', 'out', 'attack_P1.mjs')}"; exit 0`);
+    assert.equal(r.status, 0, r.stderr);
+    assert.equal(r.stderr, '');
+  } finally {
+    rmSync(d, { recursive: true, force: true });
+  }
+});

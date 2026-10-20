@@ -64,8 +64,8 @@ Supabase 向けの追加の参照（どちらも未実走）: `references/pgtap.
 - **試験が効くか**: 4 環境で、守りを 1 か所ずつ外した版を流し、全件で試験が赤になることを確認
 - **関門**: 2 段（環境の印 + データ 0 件）。印は試験の中から書き換えられない設定を使う（PostgreSQL の `cluster_name`・MySQL の `report_host`）
 - **発火**: `tests/run-trigger.mjs` で 10/10（守りを攻めて確かめる依頼 5 件で発火・無関係な依頼 5 件で発火しない）
-- **攻め役の起動**: 依頼文は固定の雛形 `scripts/attack-prompt.txt` にあり、`scripts/run-attacker.mjs` が埋めて起動する。Claude が依頼文を書き起こさないので、途中で止められても人が同じ 1 行を打てば進める。`tests/run-attacker.test.mjs` 8 本（欄が全部埋まる・判定の語が雛形に残る・前提が無ければ起動しない・標準入力を閉じる）
-- **判定の道具**: `tests/coverage.test.mjs` 38 本（判定の強さの順・陽性対照・一覧の項目の 5 つの状態・終了コード・書式の誤り）
+- **攻め役の起動**: 依頼文は固定の雛形 `scripts/attack-prompt.txt` にあり、`scripts/run-attacker.mjs` が埋めて起動する。Claude が依頼文を書き起こさないので、途中で止められても人が同じ 1 行を打てば進める。審判で見つかった試験の書き損じは `--retry` で攻め役に戻す（直しを頼む文も固定の雛形 `scripts/attack-retry.txt`）。攻め役が `out/` の外に書いたら名指しして終了コード 3。`tests/run-attacker.test.mjs` 12 本
+- **判定の道具**: `tests/coverage.test.mjs` 40 本（判定の強さの順・陽性対照・一覧の項目の 5 つの状態・終了コード・書式の誤り）
 
 ## この段取りが保証しないこと
 
