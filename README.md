@@ -324,12 +324,13 @@ as any → as X as Y / eslint-disable → （駆逐）→ 機能を削る
 
 ## 同梱する skill（発火条件を狭めてあります）
 
+> 攻め守り対戦（`attack-defend-duel`）は別プラグインに分けました。dev-os 無しで単独で入れられます → `plugins/attack-defend-duel/`
+
 | skill | いつ発火するか |
 |---|---|
 | `boundary-authoring` | `BOUNDARIES.md` を新規に作る / 境界を見直す時のみ |
 | `guardrail-authoring` | CI・フック・検出器を書く / 変更する時のみ |
 | `breach-resilience` | 鍵・ログイン・開発権限が奪われた前提で、届く範囲と止め方を点検する / 侵害時の手順書・鍵の作り直しを設計する時のみ |
-| `attack-defend-duel` | DB や API の守りを足した・変えた時に、別の AI に攻めの試験を書かせ、使い捨て環境で審判して確かめる時のみ（PostgreSQL・MySQL・Firebase・アプリの API） |
 | `doc-constitution` | プロジェクト文書そのものを作る / 正典の食い違いを裁定する時のみ |
 | `session-operations` | 複数セッションが同じ repo を同時に触る時のみ |
 | `staff-officer` | 独立した作業 lane が 2 以上ある時のみ（**適用領域で未測定**） |
