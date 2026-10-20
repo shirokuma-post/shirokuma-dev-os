@@ -42,6 +42,8 @@ codex plugin add attack-defend-duel@shirokuma-dev-os-marketplace
 
 共通の参照: `references/promises.md`（約束の一覧・書き漏れを防ぐ）/ `references/ci.md`（CI に固定する雛形）
 
+Supabase 向けの追加の参照（どちらも未実走）: `references/pgtap.md`（固定する試験を pgTAP と basejump の helper の形で書く）/ `references/supabase-api.md`（RLS を DB の中だけでなく、手元の API を通して確かめる観点）
+
 ## 実測
 
 - **見つける力**: 目立たない穴を仕込んだ題材 2 つ（アプリの API・Firestore のルール）を、穴の中身を知らせずに攻め役へ渡した → 仕込んだ 4 個を 4 個とも発見・誤った指摘 0。小さな測定なので、どんな穴でも見つかる保証ではありません

@@ -142,6 +142,8 @@ codex exec -C "$RUN" -s workspace-write --skip-git-repo-check -o "$RUN/out/last.
 | 守りがある所 | 参照 |
 |---|---|
 | PostgreSQL の行単位セキュリティ（Supabase を含む） | `references/postgres.md` |
+| pgTAP と補助関数で DB の試験を固定する（未実走） | `references/pgtap.md` |
+| 手元の API を通して行単位の権限を確かめる（未実走） | `references/supabase-api.md` |
 | MySQL / MariaDB の利用者ごとの権限・ビュー | `references/mysql.md` |
 | Firebase のセキュリティルール（Firestore / Realtime Database / Storage） | `references/firebase.md` |
 | アプリのコード（API のミドルウェア・ORM の絞り込み）。DB 側に守りが無い時 | `references/http-app.md` |
