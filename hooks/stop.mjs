@@ -12,6 +12,7 @@
 // 実測では 7/8 の機能を捨てた実装が typecheck も test も緑で通った。
 import { readFileSync, existsSync, readdirSync, appendFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
+import { homedir } from 'node:os';
 import { execSync } from 'node:child_process';
 
 const out = (o) => { process.stdout.write(JSON.stringify(o)); process.exit(0); };
@@ -233,21 +234,32 @@ const claimIntegrity = (evidence) => {
 // 「過大な主張を止める」と「正しい開示をさせる」は別物。
 // 実測: 抑止は 3/3 効いたが、開示は 1/3 しか出なかった（残り2件は無言で終了）。
 // 無言は嘘ではないが、非エンジニアは未検証だと気づけない。よって開示も block で強制する。
-const DISCLOSED = /(未検証|検証されて(いない|いません)|受け入れ条件が(未定義|ありません|ない)|保証(できません|していません|されていません)|確認できていません)|(\bnot verified\b|\bunverified\b|\bno acceptance criteria\b|\bcannot guarantee\b|\bnot confirmed\b)/i;
-// 開示の強制は 1 プロジェクト 1 回だけ。毎ターン差し戻すと恒久的な税になる。
-// 2 回目以降は block せず、文脈で伝えるにとどめる。
+// 自然な言い方の開示も認める（2026-10-20 実測: 「DB 接続・実行はしていません」と正直に書いた報告が
+// 定型の語を含まないため差し戻され、定型文の貼り付けを強いていた）。対象は「実行・試験・確認」系の動詞の否定だけ。
+const DISCLOSED = new RegExp(
+  '(未検証|未実行|未実施|検証されて(いない|いません)|受け入れ条件が(未定義|ありません|ない)|保証(できません|していません|されていません)|確認できていません)'
+  + '|(実行|試験|テスト|検証|動作確認|確認)(は|も)?(まだ)?(して(い)?ません|していない|できていません|できていない)'
+  + '|(走らせて|流して|回して)(い)?ません'
+  + '|(\\bnot verified\\b|\\bunverified\\b|\\bno acceptance criteria\\b|\\bcannot guarantee\\b|\\bnot confirmed\\b'
+  + '|\\bnot (yet )?(run|tested|executed)\\b|\\bhave(n\'t| not) (run|tested|executed)\\b)', 'i');
+// 開示の強制は 1 利用者 1 回だけ。毎ターン差し戻すと恒久的な税になる。2 回目以降は block せず、文脈で伝えるにとどめる。
+// 印はプロジェクト内と利用者の home の両方に置く。プロジェクト内だけだと、作業のたびに新しいディレクトリを作る使い方
+// （別の AI の作業場所・使い捨ての検証ディレクトリ）で毎回「初回」になり、毎回差し戻していた（2026-10-20 実測）。
+// DEVOS_STATE_HOME は自己検査が本物の印を汚さないための差し替え口。
 const askedFlag = join(dir, 'disclosure-asked');
+const userDir = join(process.env.DEVOS_STATE_HOME || join(homedir(), '.claude'), '.devos');
+const userAskedFlag = join(userDir, 'disclosure-asked');
 const needDisclosure = (evidence) => {
   if (evidence >= 2) return null;
   if (DISCLOSED.test(msg)) return null;
   if (claimLevel() === 0 && msg.length < 40) return null;   // 何も報告していないなら求めない
-  if (existsSync(askedFlag)) return null;                   // 一度教えたら以後は求めない
+  if (existsSync(askedFlag) || existsSync(userAskedFlag)) return null;   // 一度教えたら以後は求めない
   try { mkdirSync(dir, { recursive: true }); writeFileSync(askedFlag, '1'); } catch {}
+  try { mkdirSync(userDir, { recursive: true }); writeFileSync(userAskedFlag, '1'); } catch {}
   return `報告に「検証されていない」という事実が書かれていません。\n`
     + `証拠の強さは E${evidence}（${LADDER[evidence]}）です。\n`
-    + `報告の最後に、次の趣旨を必ず1行入れてください。\n`
-    + `「受け入れ条件が未定義のため、仕様を満たしているかは検証されていません」\n（英語なら: "Not verified — no acceptance criteria are defined."）\n`
-    + `嘘をつかないだけでは足りません。**読み手が未検証だと分かる形で書いてください。**`;
+    + `読み手が未検証だと分かる 1 文を足してください。言い方は自由です（例: 「実行はしていません」「試験は流していません」「（未検証）」）。\n`
+    + `この差し戻しは初回だけです。以後は求めません。`;
 };
 
 // ── 報告形式の検査（判断欄の欠落）─────────────────
@@ -304,7 +316,7 @@ if (!ranAnything) {
         + (failures.length ? `\n${failures.join('\n')}\n` : '')
       : '【品質ゲート: UNSPECIFIED】受け入れ条件が定義されていません（`.claude/invariants/` なし・`devos.json` の command なし）。')
     + '**「通りました」「完了しました」と報告しないでください。**検証されていない状態です。'
-    + '（開示は初回のみフル文。以後は「（未検証）」の短い印で足ります）' + slowWarning } });
+    + '（未検証だと分かる言い方なら自由。定型文を毎回貼る必要はありません）' + slowWarning } });
 }
 
 if (failures.length && st.blocks < cfg.maxBlocks) {
@@ -334,7 +346,7 @@ if (invFiles.length === 0) {
   out({ hookSpecificOutput: { hookEventName: 'Stop', additionalContext:
     '【品質ゲート: UNSPECIFIED】`.claude/invariants/` に受け入れ条件が1件もありません。'
     + 'プロジェクトのテストは通りましたが、**それが仕様を満たす証拠にはなりません**。'
-    + '報告には「受け入れ条件が未定義のため、検証されていない」と明記してください。'
+    + '未検証だと読み手に分かる形で書いてください（言い方は自由・定型文を毎回貼る必要はありません）。'
     + (n ? `\n判断 ${n} 件を DECISIONS.md に candidate として記録しました。` : '') + slowWarning } });
 }
 writeVerdict("PASS", 2);

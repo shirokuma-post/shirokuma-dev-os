@@ -64,6 +64,15 @@ export const negative = [
     name: '外部事実の確認（レコードの実在確認）',
     msg: '保留レコードは hub リポの pending-approvals にあり、実在を確認済みです。故障ではなく正規の保留です。（未検証）',
   },
+  // 2026-10-20 実運用: 正直な自然文の開示が定型語を含まないため差し戻され、定型文の貼り付けを強いていた。
+  {
+    name: '自然な言い方の開示（実行していないと書いている）',
+    msg: 'out/ に attack_P1.sql〜attack_P6.sql と notes.md を作成しました。\n判断が要った点：なし\nDB 接続・実行はしていません。次は使い捨て DB で各ファイルを流して確認してください。',
+  },
+  {
+    name: 'EN: 自然な言い方の開示',
+    msg: 'Created the six SQL files under out/. I have not run them against a database yet.',
+  },
 ];
 
 export const positive = [

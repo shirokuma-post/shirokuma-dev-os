@@ -13,9 +13,11 @@ import { harvestCases } from './harvest.fixtures.mjs';
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '../..');
 const HOOK = join(ROOT, 'hooks/stop.mjs');
 
-const ask = (msg, cwd) => {
+// 利用者単位の印（disclosure-asked）を本物の home に書かないよう、自己検査専用の置き場に差し替える。
+const stateHome = mkdtempSync(join(tmpdir(), 'devos-self-state-'));
+const ask = (msg, cwd, home = stateHome) => {
   const input = JSON.stringify({ session_id: Math.random().toString(36).slice(2, 10), cwd, last_assistant_message: msg });
-  const outStr = execFileSync(process.execPath, [HOOK], { input, stdio: 'pipe' }).toString();
+  const outStr = execFileSync(process.execPath, [HOOK], { input, stdio: 'pipe', env: { ...process.env, DEVOS_STATE_HOME: home } }).toString();
   try { return JSON.parse(outStr); } catch { return {}; }
 };
 
@@ -34,6 +36,20 @@ for (const c of positive) {
   else pass++;
 }
 rmSync(tmp, { recursive: true, force: true });
+
+// 開示の差し戻しは利用者ごとに 1 回だけ。新しいディレクトリでも 2 回目は止めない（2026-10-20 実測: 作業のたびに
+// 新しいディレクトリを作る使い方で毎回差し戻していた）。
+{
+  const home = mkdtempSync(join(tmpdir(), 'devos-self-once-'));
+  const d1 = mkdtempSync(join(tmpdir(), 'devos-self-d1-'));
+  const d2 = mkdtempSync(join(tmpdir(), 'devos-self-d2-'));
+  const undisclosed = '修正しました。npm run typecheck: 通過。';
+  const first = ask(undisclosed, d1, home);
+  const second = ask(undisclosed, d2, home);
+  if (first.decision === 'block' && second.decision !== 'block') pass++;
+  else { fail++; bad.push(`[回数] 開示の差し戻しが利用者ごと 1 回になっていない: 1 回目=${first.decision ?? 'なし'} 2 回目=${second.decision ?? 'なし'}`); }
+  for (const t of [home, d1, d2]) rmSync(t, { recursive: true, force: true });
+}
 
 // 判断回収（DECISIONS.md）— 判断の行は回収し、報告の締めや定型文は混入させない。
 for (const c of harvestCases) {
@@ -54,6 +70,7 @@ for (const c of harvestCases) {
   rmSync(t, { recursive: true, force: true });
 }
 
+rmSync(stateHome, { recursive: true, force: true });
 console.log(`自己検査: ${pass}/${pass + fail} 合格`);
 if (bad.length) { console.log('\n' + bad.join('\n')); process.exit(1); }
 console.log('  正常例を止めない / 違反例を見逃さない / 判断だけを回収する、を確認しました。');
