@@ -271,6 +271,9 @@ const hasJudgmentSection = () => msg.split('\n').some((raw) => {
   return /^(判断が要った|設計判断|決めた点|前提を置)/.test(line);
 });
 const needFormat = () => {
+  // 判断欄の要求は報告の形式が full の時だけ (.claude/devos.json の "profile": "light" か "report": "minimal"/"off" で外せる・2026-10-20)
+  const reportMode = ['full', 'minimal', 'off'].includes(cfg.report) ? cfg.report : (cfg.profile === 'light' ? 'minimal' : 'full');
+  if (reportMode !== 'full') return null;
   if (st.formatAsked) return null;
   if (msg.length < 120 || claimLevel() === 0) return null;   // 短い返答・作業報告でないものは対象外（日本語 120 字 ≈ 実質的な報告の下限）
   if (hasJudgmentSection()) return null;

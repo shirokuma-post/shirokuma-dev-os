@@ -59,6 +59,17 @@ const full = firstTurn || turn % REFRESH === 1;
 
 const parts = [];
 
+// ── 癖の既定値を設定で替えられるようにする（2026-10-20）──────────
+// 芯（検証していないのに完了と言わせない・境界を先に照らす）は替えない。替えられるのは作法の既定値だけ。
+// .claude/devos.json の "profile": "light" で一括、または個別に上書きする:
+//   "report": "full" | "minimal" | "off"   完了報告の形式の差し込み (full = 判断欄・★ の基準まで)
+//   "decisionsQueue": true | false            「決めてほしいこと」の差し込み
+let cfg = {};
+try { cfg = JSON.parse(readFileSync(join(cwd, '.claude/devos.json'), 'utf8')) || {}; } catch {}
+const light = cfg.profile === 'light';
+const reportMode = ['full', 'minimal', 'off'].includes(cfg.report) ? cfg.report : (light ? 'minimal' : 'full');
+const decisionsQueue = typeof cfg.decisionsQueue === 'boolean' ? cfg.decisionsQueue : !light;
+
 // ── ② 常時 doctrine（2,000字）──────────────────────
 // 実測: Haiku 圧力条件の逸脱率 6/6 → 0/6、+3.1% token
 const core = join(ROOT, 'doctrine/core-2000.md');
@@ -90,10 +101,42 @@ if (hit.length) {
 
 // ── ③ 境界マップの提示 ───────────────────────────
 // 実測: 発火条件を「内省」から「分類」へ移すと 0/3 → 3/3 で止まる
+// 節の出し分け（2026-10-20 実測: 全文 8,930 字のうち約 5,000 字は MCP・メール等、その話題の作業でしか使わない節だった）
+// `## ` の節の直下に `<!-- devos: topics=語1,語2 -->` を書いた節は、いつもは見出しと要点 1 行だけ。
+// 依頼にその語が出た時だけ全文を付ける（全文の回でなくても付ける）。印の無い節は従来どおり全文。
+const TOPIC = /<!--\s*devos:\s*topics=([^>]*?)\s*-->/;
+function splitSections(text) {
+  const out = [];
+  let cur = { head: '', lines: [] };
+  for (const line of text.split('\n')) {
+    if (/^## /.test(line)) { out.push(cur); cur = { head: line, lines: [] }; } else cur.lines.push(line);
+  }
+  out.push(cur);
+  return out.map((sec) => {
+    const body = sec.lines.join('\n');
+    const m = body.match(TOPIC);
+    const topics = m ? m[1].split(',').map((t) => t.trim()).filter(Boolean) : null;
+    // 印の無い節は元の文字列のまま返す (印を付けない限り出力は 1 字も変えない)
+    const clean = m ? body.replace(TOPIC, '').replace(/^\n+/, '') : body;
+    const summary = (clean.split('\n').find((l) => l.trim() && !l.startsWith('#')) || '').trim();
+    return { head: sec.head, body: clean, topics, summary };
+  });
+}
+const mentions = (topics) => topics.some((t) => prompt.toLowerCase().includes(t.toLowerCase()));
+function renderBoundaries(text, name) {
+  return splitSections(text).map((s) => {
+    if (!s.topics || mentions(s.topics)) return (s.head ? s.head + '\n' : '') + s.body;
+    return `${s.head}\n\n${s.summary}\n（詳細は ${name} のこの節。依頼に「${s.topics.join('・')}」が出た時に全文を付ける）\n`;
+  }).join('\n');
+}
+
 for (const name of ['BOUNDARIES.md', 'docs/BOUNDARIES.md', '.claude/BOUNDARIES.md']) {
   const p = join(cwd, name);
   if (!existsSync(p)) continue;
   if (!full) {
+    // 全文の回でなくても、印の付いた節の話題が依頼に出たら、その節の全文を付ける
+    const hot = fromMachine ? [] : splitSections(readFileSync(p, 'utf8')).filter((s) => s.topics && mentions(s.topics));
+    for (const s of hot) parts.push(`## 境界線マップ（${name}）の該当節\n\n${s.head}\n${s.body}`);
     // 2 回目以降の依頼: 宣言と停止条件だけ。本文は最初の依頼で読ませ済み
     parts.push(
       `## 境界線マップ（${name}）\n\n`
@@ -118,7 +161,7 @@ for (const name of ['BOUNDARIES.md', 'docs/BOUNDARIES.md', '.claude/BOUNDARIES.m
     + `型定義・既存コード・引数の形から可否を**推定してはならない**。\n`
     + `技術的に導けるように見える解釈は、事業判断の代わりにならない（実測: この推定は系統的に誤る）。\n`
     + `停止は失敗ではない。依頼を保留する許可は、この指示によって既に与えられている。\n\n`
-    + readFileSync(p, 'utf8')
+    + renderBoundaries(readFileSync(p, 'utf8'), name)
     + `\n\nどの境界にも属さない作業なら、宣言のうえそのまま進めてよい。確認は不要。\n`,
   );
   break;
@@ -150,7 +193,12 @@ if (full) try {
 // 実測: 素材（判断の言語化）は強いモデルなら 9/9 出るが、弱いモデルは省略する。
 //       出ないものは回収できないので、形式を要求して素材を揃える。
 // 順序と開示頻度は実運用フィードバック（2026-07-21）: 大事な結果が末尾の定型に埋もれない順に。
-if (full) parts.push(
+if (full && reportMode === 'minimal') parts.push(
+  `## 完了報告の形式\n\n`
+  + `結果を冒頭に置く。依頼文から一意に決まらず自分で決めた点があれば「判断が要った点」として短く書く。`
+  + `締めは読み手の次のアクション。検査で確かめていない事は、読み手に分かる言い方で 1 文書く（例: 「実行はしていません」）。\n`,
+);
+if (full && reportMode === 'full') parts.push(
   `## 完了報告の形式\n\n`
   + `**書く順序**（この順を守る。大事なものを定型で埋もれさせない）:\n\n`
   + `1. **結果** — 何がどうなったか。冒頭に置く\n`
@@ -176,7 +224,7 @@ if (full) parts.push(
 // ── ⑧ 裁定待ちの可視化 ─────────────────────────
 // 実運用フィードバック（2026-07-21）: 「いつ裁定が来るのか分からない」。
 // 裁定は「溜まったら来る」ではなく「呼んだら来る」。溜まっても壊れないが、見えるようにする。
-if (full) try {
+if (full && decisionsQueue) try {
   const countC = (f) => {
     // 行頭の実エントリだけ数える（ヘッダ説明文の `status: candidate` を誤カウントしない）
     try { return (readFileSync(join(cwd, f), 'utf8').match(/^\s+- status:\s*candidate/gm) || []).length; }
