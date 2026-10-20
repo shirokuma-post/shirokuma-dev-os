@@ -1,10 +1,21 @@
 {
   "name": "attack-defend-duel",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "守りの約束（行単位の権限・役ごとの権限・取得量の上限など）が破れないかを、別の AI に攻めの試験を書かせ、Claude が使い捨て環境で審判して確かめる。スキル 1 本だけ・フック無し。PostgreSQL/Supabase・MySQL・Firebase のルール・アプリの API に対応。",
-  "author": { "name": "shirokuma-post", "url": "https://github.com/shirokuma-post" },
+  "author": {
+    "name": "shirokuma-post",
+    "url": "https://github.com/shirokuma-post"
+  },
   "license": "MIT",
   "homepage": "https://github.com/shirokuma-post/shirokuma-dev-os/tree/main/plugins/attack-defend-duel",
   "repository": "https://github.com/shirokuma-post/shirokuma-dev-os",
-  "keywords": ["security", "rls", "authorization", "mutation-testing", "red-team", "codex", "claude-code"]
+  "keywords": [
+    "security",
+    "rls",
+    "authorization",
+    "mutation-testing",
+    "red-team",
+    "codex",
+    "claude-code"
+  ]
 }

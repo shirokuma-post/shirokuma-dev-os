@@ -38,7 +38,16 @@ mysql -h127.0.0.1 -P53306 -utenant_a -pduel -e "SELECT * FROM app.orders"   # �
 - `GRANT` / `REVOKE` / `CREATE USER` も暗黙に commit される。権限を渡せるかの試験は「既に持っている権限の再付与」で試すか、`SHOW GRANTS` の中身（`WITH GRANT OPTION` 等）を読んで判定する。
 - ミューテーションは権限を 1 つ開ける → 試験 → `REVOKE` で戻す、の順。最後に `SHOW GRANTS FOR` で元どおりかを確かめる。
 
-## 関門
+## 関門（2 段）
+
+1 段目の印は `report_host`。起動時に `--report-host=duel-disposable` を付ける。実行中は読み取り専用で、`SET GLOBAL` / `SET SESSION` のどちらでも変えられない（2026-10-20 実測）。
+
+```bash
+mysqld ... --report-host=duel-disposable
+[ "$(mysql ... -N -e 'SELECT @@report_host')" = duel-disposable ] || { echo 'not a disposable DB (no marker)'; exit 1; }
+```
+
+2 段目は下のデータの確かめ。両方を通ってから seed を作る。
 
 MySQL は `SELECT` の中で失敗を起こしにくい (ゼロ除算も NULL になる)。試験を回す script の最初で確かめ、満たさなければ流さない。
 

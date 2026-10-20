@@ -38,6 +38,15 @@ codex plugin add attack-defend-duel@shirokuma-dev-os-marketplace
 
 4 つとも 2026-10-20 に実地で 1 回ずつ回しています（各参照の冒頭に実測の内容）。
 
+共通の参照: `references/promises.md`（約束の一覧・書き漏れを防ぐ）/ `references/ci.md`（CI に固定する雛形）
+
+## 実測
+
+- **見つける力**: 目立たない穴を仕込んだ題材 2 つ（アプリの API・Firestore のルール）を、穴の中身を知らせずに攻め役へ渡した → 仕込んだ 4 個を 4 個とも発見・誤った指摘 0。小さな測定なので、どんな穴でも見つかる保証ではありません
+- **試験が効くか**: 4 環境で、守りを 1 か所ずつ外した版を流し、全件で試験が赤になることを確認
+- **関門**: 2 段（環境の印 + データ 0 件）。印は試験の中から書き換えられない設定を使う（PostgreSQL の `cluster_name`・MySQL の `report_host`）
+- **発火**: `tests/run-trigger.mjs` で 10/10（守りを攻めて確かめる依頼 5 件で発火・無関係な依頼 5 件で発火しない）
+
 ## 必要なもの
 
 - Claude Code

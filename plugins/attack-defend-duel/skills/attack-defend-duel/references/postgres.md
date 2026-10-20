@@ -36,17 +36,29 @@ RESET ROLE;
 - 権限で拒否される手筋は `EXCEPTION WHEN insufficient_privilege` で受けて次へ進む。
 - 試験は `BEGIN` で始め `ROLLBACK` で終える。実行は `psql -v ON_ERROR_STOP=1 -f`。
 
-## 関門
+## 関門（2 段）
+
+使い捨ての環境を立てる時に `cluster_name` を付ける。`cluster_name` は起動時にしか決められず、試験の中の `SET` や接続時の `PGOPTIONS` では変えられない（2026-10-20 実測）。
+
+```bash
+docker run -d --name duel-pg -e POSTGRES_PASSWORD=duel -p 127.0.0.1:55432:5432 postgres:17 -c cluster_name=duel-disposable
+# 手元のバイナリ: pg_ctl ... -o "... -c cluster_name=duel-disposable" start
+```
 
 ```sql
 DO $$ BEGIN
+  IF current_setting('cluster_name') <> 'duel-disposable' THEN
+    RAISE EXCEPTION 'not a disposable DB (no marker)';
+  END IF;
   IF (SELECT count(*) FROM <必ず 1 行以上ある表>) > 0 THEN
-    RAISE EXCEPTION 'not a disposable DB';
+    RAISE EXCEPTION 'not a disposable DB (has data)';
   END IF;
 END $$;
 ```
 
 - 「必ず 1 行以上ある表」= 本番で空になりえない表（テナント・組織・利用者の表など）。
+- 自作の設定名（`duel.disposable` 等）を印にしない。`SET` で誰でも付けられる（実測で偽れた）。
+- `supabase start` のように起動の引数を渡せない環境では、1 段目を「接続先が手元か」（`inet_server_addr()` が NULL か `127.0.0.1` / `::1`）に替える。
 - 試験の中で表の形を一時的に変える（`ALTER TABLE ... ADD CONSTRAINT ... NOT VALID` で書き込みを失敗させる等）なら、関門は必須。本番で走ると強い lock を取り、失敗時に制約が残る。
 
 ## 守りの層（ミューテーションで外す候補）
