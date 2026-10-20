@@ -1,6 +1,6 @@
 {
   "name": "attack-defend-duel",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "守りの約束（行単位の権限・役ごとの権限・取得量の上限など）が破れないかを、別の AI に攻めの試験を書かせ、Claude が使い捨て環境で審判して確かめる。スキル 1 本だけ・フック無し。PostgreSQL/Supabase・MySQL・Firebase のルール・アプリの API に対応。",
   "author": {
     "name": "shirokuma-post",

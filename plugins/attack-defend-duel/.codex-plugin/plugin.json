@@ -1,6 +1,6 @@
 {
   "name": "attack-defend-duel",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "守りの約束が破れないかを、攻め役と審判役に分けて使い捨て環境で確かめるスキル 1 本。フック無し。",
   "author": {
     "name": "shirokuma-post",
