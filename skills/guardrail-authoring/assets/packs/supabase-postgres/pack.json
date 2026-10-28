@@ -1,0 +1,34 @@
+{
+  "name": "supabase-postgres",
+  "description": "PostgreSQL / Supabase 固有の番人 — RLS 無効テーブル検出・テナント列不変条件・バックアップ復元演習。マルチテナント境界 (B3/B4) と特権鍵の物理防壁を守る。",
+  "applies_when": "PostgreSQL (特に Supabase/PostgREST 構成) を DB に使うプロジェクト。restore-drill は永続 DB を持つなら DB 種別を問わず転用可。",
+  "checks": [
+    {
+      "id": "rls-disabled-tables",
+      "file": "rls_disabled_tables.sql",
+      "scope": "監視対象 schema ({{ }} 置換) の ordinary table の relrowsecurity (live カタログ)",
+      "severity": "warn",
+      "evidence": "pg_class / pg_namespace の実測。返り行 = RLS 無効の違反テーブル (0 行を保つ)",
+      "remediation": "ALTER TABLE ... ENABLE ROW LEVEL SECURITY + policy 整備。意図的な公開表は allowlist に明示",
+      "limitations": "返り行 = 違反という報告のみで、psql は行が返っても exit 0 = CI で block するには行数判定の wrapper が別途必要 (現状は監査・定期実行用)。RLS 有効だが policy 0 個 (全拒否/設定漏れ) の検出はコメントアウトされた補助クエリ側で、既定では走らない"
+    },
+    {
+      "id": "tenant-column-invariant",
+      "file": "tenant_column_invariant.sql",
+      "scope": "{{tenant_col}} 列を持つ全業務テーブルの 3 不変条件 (① NOT NULL ② DEFAULT 禁止 ③ 自動刻みトリガ存在)",
+      "severity": "warn",
+      "evidence": "pg_attribute / pg_attrdef / pg_trigger の live カタログ実測。返り行 = 違反",
+      "remediation": "NOT NULL 化・DEFAULT 除去 (テスト残骸 default = 越境の入口)・BEFORE INSERT の auto-fill トリガ付与",
+      "limitations": "rls-disabled-tables と同様、返り行の報告のみで exit code では block しない (wrapper 要)。tenant 列名は単一前提 = 列名が複数種ある repo は置換して複数回実行。トリガはトリガ関数名の一致のみ確認 = 関数の中身が正しく刻んでいるかまでは検査しない"
+    },
+    {
+      "id": "restore-drill",
+      "file": "restore-drill.md.template",
+      "scope": "バックアップ / PITR の定期復元演習 (推奨: 四半期・本番非接触で別環境へ復元)",
+      "severity": "warn",
+      "evidence": "実際の復元 + RTO 計測 + データ整合 (件数/最新レコード/FK) + コアフロー疎通 + テナント分離確認の人手チェックリスト",
+      "remediation": "失敗項目を runbook 化。「最後に復元成功した日」を台帳で可視化し、期間が空いたら赤信号",
+      "limitations": "自動化されていない人手演習 = カレンダー化しないと形骸化する。enforcement なし (チェックリストであり番人 script ではない)。PITR 等の用語は managed DB 前提だが、演習の型自体は relational DB 全般に転用可"
+    }
+  ]
+}

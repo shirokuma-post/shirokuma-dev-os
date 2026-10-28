@@ -1,0 +1,16 @@
+{
+  "name": "nextjs",
+  "description": "Next.js + serverless hosting (Vercel 等) 固有の番人 — route の実行時間上限 (maxDuration)。route 契約・本番 build 検証は typescript pack の ci-guardrails (本番 build job) と組み合わせる。",
+  "applies_when": "Next.js (App Router の route.ts 等) を serverless プラットフォームにデプロイするプロジェクト。",
+  "checks": [
+    {
+      "id": "maxduration-check",
+      "file": "maxduration-check.mjs",
+      "scope": "route glob ({{src}}/**/route.{ts,js}) の export const maxDuration 宣言",
+      "severity": "block",
+      "evidence": "正規表現で maxDuration の数値リテラルを抽出し、PLAN 環境変数のプラン上限 (free=60s / paid=300s) と比較。超過 1 件で exit 1",
+      "remediation": "長時間処理はジョブキュー (QStash 等) で非同期化するか、プラン昇格。ローンチ前に 0 件を確認",
+      "limitations": "globSync は Node 22+ (古い環境は fast-glob 等に置換要)。maxDuration 未宣言の route (プラットフォーム既定値) は検査対象外。数値リテラル以外 (変数/計算式) は検出不能。プラン上限値は Vercel の値を hardcode = 他プラットフォームでは CAP を書き換えて使う"
+    }
+  ]
+}

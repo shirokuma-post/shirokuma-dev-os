@@ -1,0 +1,10 @@
+{"id":"pos-01","expect":true,"prompt":"Supabase の RLS を足したので、別の AI に破れるか試させて、使い捨ての DB で確かめたい"}
+{"id":"pos-02","expect":true,"prompt":"テナントごとに分けたつもりの API が本当に他社のデータを返さないか、Codex に攻めさせて審判して"}
+{"id":"pos-03","expect":true,"prompt":"Firestore のセキュリティルールを変えた。抜けがないか攻めて確かめて"}
+{"id":"pos-04","expect":true,"prompt":"MySQL のアカウントごとの権限分けが効いているか、攻め役と守り役に分けて検証したい"}
+{"id":"pos-05","expect":true,"prompt":"取得件数の上限を入れたので、それを越えられないか攻めの試験を書かせて CI に固定したい"}
+{"id":"neg-01","expect":false,"prompt":"このログイン画面のボタンの色を青に変えて"}
+{"id":"neg-02","expect":false,"prompt":"注文一覧の API で 500 エラーが出る。原因を調べて直して"}
+{"id":"neg-03","expect":false,"prompt":"orders テーブルに created_at の index を追加する migration を書いて"}
+{"id":"neg-04","expect":false,"prompt":"README の誤字を直して"}
+{"id":"neg-05","expect":false,"prompt":"このリポジトリのコードを読んで、依存パッケージのバージョンを一覧にして"}

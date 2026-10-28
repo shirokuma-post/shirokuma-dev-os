@@ -1,0 +1,58 @@
+# 失敗カタログの番人を AST 化（Semgrep）。grep番人より正確。コピー先: checks/semgrep-rules.yml
+# 実行: semgrep --error --config checks/semgrep-rules.yml
+# {{ }} は自プロジェクトの共通関数名/関門パスに置換。誤検出は paths.exclude / metavariable で調整。
+rules:
+  # A6: 特権クライアント/最高権限キーを関門以外で使用
+  - id: service-role-outside-gateway
+    languages: [typescript, javascript]
+    severity: ERROR
+    message: "A6: 特権クライアント/service_role は関門(Gateway)内のみ。ここでの使用は越境。"
+    paths:
+      exclude: ["{{lib/gateway/**}}", "{{packages/*-gateway/**}}"]
+    patterns:
+      - pattern-either:
+          - pattern: createServiceClient(...)
+          - pattern: $X = process.env.SUPABASE_SERVICE_ROLE_KEY
+
+  # C1: ユーザー入力URLを検証せず server-side fetch（SSRF）
+  - id: ssrf-unvalidated-fetch
+    languages: [typescript, javascript]
+    severity: ERROR
+    message: "C1: 外部fetchは共通の validatePublicUrl()/safeFetch() を必ず通す（SSRF）。"
+    patterns:
+      - pattern: fetch($URL, ...)
+      - metavariable-pattern:
+          metavariable: $URL
+          patterns:
+            - pattern-not: "'...'"          # 定数URLは対象外
+            - pattern-not: "`https://...`"
+      - pattern-not-inside: "{{safeFetch}}(...)"
+      - pattern-not-inside: |
+          {{validatePublicUrl}}(...)
+          ...
+
+  # B1: URL属性にユーザー値を sanitizeUrl 無しで挿入（XSS: javascript:はescapeHtmlを素通り）
+  - id: xss-url-attr-without-sanitize
+    languages: [typescript, javascript]
+    severity: ERROR
+    message: "B1: href/src への変数挿入は sanitizeUrl() を通す（escapeHtmlだけでは javascript: を防げない）。"
+    patterns:
+      - pattern-regex: '(href|src)\s*=\s*[`"''][^`"'']*\$\{(?!.*{{sanitizeUrl}})'
+
+  # B2: body/query の userId を信頼して特権操作（権限昇格）
+  - id: trust-body-userid
+    languages: [typescript, javascript]
+    severity: ERROR
+    message: "B2: acting user は session/JWT claim から取る。body.userId を書き込み条件に使わない。"
+    pattern-either:
+      - pattern: $REQ.body.user_id
+      - pattern: $REQ.body.userId
+
+  # H1: スキーマ指定忘れ（専用テーブルなのに .schema() を通していない）
+  - id: missing-schema-qualifier
+    languages: [typescript, javascript]
+    severity: WARNING
+    message: "H1: 専用テーブルは .schema('{{name}}') を付ける（既定スキーマ参照で空振り）。"
+    patterns:
+      - pattern: $C.from($T)
+      - pattern-not-inside: $C.schema($S).from($T)

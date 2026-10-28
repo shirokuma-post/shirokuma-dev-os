@@ -1,0 +1,384 @@
+#!/usr/bin/env node
+// ⑤ Prevent ＋ ⑥ Learn を 1 本の Stop フックに統合。
+// 分けると互いのループ抑制が干渉して暴走する（実測: 同一セッションで7回追記された）。
+//
+// 判定は四値。
+//   PASS        受け入れ条件を全て満たした
+//   FAIL        満たしていない → 差し戻す
+//   INVALID     検査自体が走らなかった → 止めない・緑とも言わせない
+//   UNSPECIFIED 受け入れ条件が定義されていない → 止めない・**緑と言わせない**
+//
+// 今回の失敗の教訓: プロジェクト自身のテストに委ねると、そのテストの不十分さを継承する。
+// 実測では 7/8 の機能を捨てた実装が typecheck も test も緑で通った。
+import { readFileSync, existsSync, readdirSync, writeFileSync, mkdirSync } from 'node:fs';
+import { join } from 'node:path';
+import { homedir } from 'node:os';
+import { execSync } from 'node:child_process';
+import { recordPlace, appendRecord } from './record-place.mjs';
+
+const out = (o) => { process.stdout.write(JSON.stringify(o)); process.exit(0); };
+let input = {}; try { input = JSON.parse(readFileSync(0, 'utf8') || '{}'); } catch { out({}); }
+if (process.env.SHIROKUMA_DEVOS === 'off') out({});
+
+const cwd = input.cwd || process.cwd();
+const sid = String(input.session_id || 'x').slice(0, 8);
+const msg = String(input.last_assistant_message ?? '');
+const dir = join(cwd, '.claude/.devos');
+const cf = join(dir, `${sid}.json`);
+let st = { blocks: 0, harvested: false };
+try { if (existsSync(cf)) st = { ...st, ...JSON.parse(readFileSync(cf, 'utf8')) }; } catch {}
+const save = () => { try { mkdirSync(dir, { recursive: true }); writeFileSync(cf, JSON.stringify(st)); } catch {} };
+
+let cfg = { command: null, maxBlocks: 3 };
+try { cfg = { ...cfg, ...JSON.parse(readFileSync(join(cwd, '.claude/devos.json'), 'utf8')) }; } catch {}
+
+// ── ④ 受け入れ条件 ─────────────────────────────
+// .claude/invariants/*.mjs  各ファイルは export function check(cwd) -> {ok, detail}
+const invDir = join(cwd, '.claude/invariants');
+let invFiles = [];
+try { invFiles = readdirSync(invDir).filter((f) => f.endsWith('.mjs')); } catch {}
+
+const failures = [];
+let ranAnything = false;
+
+for (const f of invFiles) {
+  try {
+    const m = await import(join(invDir, f));
+    const r = await m.check(cwd);
+    ranAnything = true;
+    if (!r?.ok) failures.push(`${f}: ${r?.detail ?? '不合格'}`);
+  } catch (e) {
+    failures.push(`${f}: 検査を実行できません（${String(e.message).slice(0, 80)}）`);
+  }
+}
+
+// 検査時間を測る。毎ターン走るので、重い command は実用性を殺す。
+let gateMs = 0;
+if (cfg.command) {
+  const t0 = Date.now();
+  try { execSync(cfg.command, { cwd, stdio: 'pipe', timeout: (cfg.timeoutSec ?? 120) * 1000 }); ranAnything = true; }
+  catch (e) {
+    const c = String(e.stdout || '') + String(e.stderr || '');
+    if (/command not found|ENOENT|Missing script|ETIMEDOUT/i.test(c)) { /* INVALID: 数えない */ }
+    else { ranAnything = true; failures.push(`${cfg.command}:\n${c.slice(-800)}`); }
+  }
+  gateMs = Date.now() - t0;
+}
+const slowWarning = gateMs > (cfg.warnSec ?? 30) * 1000
+  ? `\n\n⚠ 品質ゲートに ${Math.round(gateMs / 1000)} 秒かかっています（応答のたびに走ります）。`
+    + `\`.claude/devos.json\` の \`command\` を軽いもの（型チェックのみ等）に絞ることを検討してください。`
+  : '';
+
+// 記録の置き場所（worktree で動いた時は repo の本体の checkout・それ以外は cwd）。回収する物がある時だけ git に聞く。
+let place = null;
+const recordDir = () => (place ??= recordPlace(cwd)).dir;
+// 書けなかった時（本体の checkout が書込不可など）は従来の cwd に書く。記録は止めない
+const record = (name, header, block) => {
+  try { return appendRecord(join(recordDir(), name), header, sid, block); }
+  catch { place = { dir: cwd, redirected: false }; return appendRecord(join(cwd, name), header, sid, block); }
+};
+const whereNote = () => (place?.redirected ? `（作業場所が git worktree のため、本体の checkout の ${join(place.dir, 'DECISIONS.md')}）` : '');
+
+// ── ⑥' 手順の回収（1 セッション 1 回だけ）────────────
+// 自己改善の裁定ゲート: 生成は AI・権限は人間。adopted になるまで注入されない。
+const harvestPlays = () => {
+  if (st.playsHarvested) return 0;
+  const lines = msg.split('\n');
+  const picked = [];
+  let cap = false;
+  for (const raw of lines) {
+    const line = raw.trim().replace(/\*\*/g, '').replace(/^[-*・]\s*/, '');
+    // 行頭一致のみ（実測 2026-07-21: 本文中の言及だけで発火し、機能説明の断片が手順として混入した）
+    if (/^再利用できそうな手順/.test(line)) { cap = true; continue; }
+    if (!cap) continue;
+    if (/^#{1,4}\s/.test(line) || /判断が要った/.test(line)) break;
+    // 「次のアクション」以降と裁定 UX の定型文は手順ではない（判断回収と同じ欠陥クラス）
+    if (/^次のアクション/.test(line)) break;
+    if (/決めてほしいことが\s*\d+\s*件/.test(line)) break;
+    if (/(受け入れ条件が未定義|検証されて(いない|いません)|\bnot verified\b|^なし$)/i.test(line)) break;
+    if (line.length > 10 && !/^\(|^（/.test(line)) picked.push(line);
+    if (picked.length >= 3) break;
+  }
+  if (!picked.length) return 0;
+  const header = (
+    '# 手順書\n\n> `status: candidate` はまだ誰も承認していない。\n'
+    + '> 承認して `adopted` にした手順だけが、以後のセッションに注入される。\n'
+    + '> 生成は AI・権限は人間（自己改善は裁定を経て初めて資産になる）。\n'
+    + '> 裁定の提示は DECISIONS.md と同じ形式（1 件ずつ・平易な帰結文・はい/いいえ/保留）。\n');
+  let taskLine = '';
+  try { taskLine = readFileSync(join(dir, `${sid}.task`), 'utf8').trim(); } catch {}
+  // 判断の回収と同じ規律: 既定は task-local（記録のみ）・★ が付いた手順だけ candidate
+  let askedPlays = 0;
+  record('PLAYBOOK.md', header, `\n## ${sid}\n\n`
+    + (taskLine ? `> 依頼: ${taskLine}\n\n` : '')
+    + picked.map((p) => {
+      const universal = /^[★*＊]\s*/.test(p);
+      if (universal) askedPlays += 1;
+      return `- ${p.replace(/^[★*＊]\s*/, '')}\n`
+        + (universal
+          ? '  - status: candidate\n  - ratified_by: （未裁定）\n'
+          : '  - status: task-local（その作業限りの手順。記録のみ・裁定不要）\n  - ratified_by: 不要\n');
+    }).join(''));
+  st.playsHarvested = true; save();
+  return askedPlays;
+};
+
+// ── ⑥ 判断の回収（1 セッション 1 回だけ）────────────
+const harvest = () => {
+  harvestPlays();
+  if (st.harvested) return 0;
+  const lines = msg.split('\n');
+  const picked = [];
+  let cap = false;
+  for (const raw of lines) {
+    const line = raw.trim().replace(/\*\*/g, '').replace(/^[-*・]\s*/, '');
+    // 行頭一致のみ（本文中の言及での誤発火を防ぐ・手順回収と同じ欠陥クラス）
+    if (/^(判断が要った|設計判断|決めた点|前提を置)/.test(line)) { cap = true; continue; }
+    if (!cap) continue;
+    if (/^#{1,4}\s/.test(line)) break;
+    // 手順セクションは判断ではない（別ファイルへ回収する）
+    if (/再利用できそうな手順/.test(line)) break;
+    // 「次のアクション」以降は報告の締めであって判断ではない
+    // （実測 2026-07-22: shirokuma_SaaS/DECISIONS.md 8c6cc3a0・81e448e4 で candidate に混入した）
+    if (/^次のアクション/.test(line)) break;
+    // 裁定 UX の定型文（「決めてほしいことが N 件あります」）は案内文であって判断ではない
+    if (/決めてほしいことが\s*\d+\s*件/.test(line)) break;
+    // 「発見」「補足」等の別セクション見出しで打ち切る（実測 2026-07-24: 見出しの断片と
+    // その配下の観察が candidate に混入し、判断でないものを人に聞いていた）
+    if (/^(発見|補足|注記|参考|残作業|所感|備考)[（(：:\s]/.test(line)) break;
+    // 開示文は判断ではない（実測 2026-07-21: 末尾の未検証開示が candidate に混入した）
+    if (/(受け入れ条件が未定義|検証されて(いない|いません)|\bnot verified\b)/i.test(line)) break;
+    if (line.length > 10 && !/^\(|^（/.test(line)) picked.push(line);
+    if (picked.length >= 5) break;
+  }
+  if (!picked.length) return 0;
+  const header = (
+    '# 決定記録\n\n> `status: task-local` = その作業限りの判断。記録のみで、人には聞かない。\n'
+    + '> `status: candidate` = 今後すべてに効く普遍ルールの候補。人の答えを待っている。\n'
+    + '> 承認・訂正して `adopted` にしたものだけが、以後の検査の根拠になる。\n'
+    + '>\n'
+    + '> **裁定を頼まれた AI へ**（実測 2026-07-21/24: 工程用語の一括提示・目先の実装細部は裁定不能）:\n'
+    + '> 1. 見るのは `candidate` だけ。`task-local` は聞かない（分類は報告時に済んでいる）\n'
+    + '> 2. 提示は 1 件ずつ・工程用語なしの「今後 AI はこうします」という帰結の平易文で、\n'
+    + '>    「> 依頼:」の文脈（どの作業での判断か）を必ず添える\n'
+    + '> 3. 推奨を明示して「はい（推奨）/ いいえ / 保留」の三択にする。保留は削除しない\n');
+  let taskLine = '';
+  try { taskLine = readFileSync(join(dir, `${sid}.task`), 'utf8').trim(); } catch {}
+  // 既定は task-local（記録のみ・人に聞かない）。★ が付いた行だけを candidate にする。
+  // 裁定（2026-07-24・しろくまさん）: 目先の実装細部まで人に聞くのはストレスでしかない。
+  // 分類は文脈が最も濃い「報告を書いた瞬間」に前倒しする（後から人間が仕分けない）。
+  let asked = 0;
+  record('DECISIONS.md', header, `\n## ${sid}\n\n`
+    + (taskLine ? `> 依頼: ${taskLine}\n\n` : '')
+    + picked.map((p) => {
+      const universal = /^[★*＊]\s*/.test(p);
+      if (universal) asked += 1;
+      return `- ${p.replace(/^[★*＊]\s*/, '')}\n`
+        + (universal
+          ? '  - status: candidate\n  - ratified_by: （未裁定）\n'
+          : '  - status: task-local（その作業限りの判断。記録のみ・裁定不要）\n  - ratified_by: 不要\n');
+    }).join(''));
+  st.harvested = true; save();
+  return asked;   // 人に届ける件数 = ★ の数だけ
+};
+
+// ── Claim Integrity ─────────────────────────────
+// 完了主張の強さが、実際に存在する証拠の強さを超えていないか。
+// 分散ゼロは主成果ではない（悪い状態に安定していても分散は 0 になる）。
+// 見るべきは「根拠以上のことを保証していないか」。
+// 事実の報告と、範囲を伴う主張を分ける。
+// 「npm run typecheck: 通過」は検査対象を特定した事実 → 読み手が範囲を判断できる → C1
+// 「テストが通ったので問題ありません」は範囲が無限に読める主張 → C2/C3
+// 実測の反省: この区別が無いと、正直な報告まで差し戻して 3 回空転させた。
+const SPECIFIC = /(npm |yarn |pnpm |tsc|jest|vitest|pytest|`[^`]+`\s*[:：])/;
+// 引用は主張ではない（実測 2026-07-21: 誤検知の発火語を引用した報告が再ブロックされ、書き直しが空転した）。
+// 主張判定の前に 「」『』・backtick 内を除去する。SPECIFIC だけは原文を見る（`cmd`: 形式の事実表記を拾うため）。
+const QUOTED = /「[^」]*」|『[^』]*』|`[^`]*`/g;
+// 主張ではない構文（実運用 3 日分の実測 2026-07-24: 差し戻し上限に達した 4 セッションの主因）。
+// 共通の型は「主語が成果物でない完了語」。判定前に除去する。
+//   ① データ値      status=completed / conclusion: success（API の出力であって完了主張ではない）
+//   ② 行為の完了    調査完了・実測完了（行為は終わったが、成果物の検証済み主張ではない）
+//                   ※ 実装完了・移行完了は成果物の主張なので除外しない
+//   ③ 条件付きの見立て 〜なら/れば … 問題なし（仮定であって保証ではない）
+const NOT_CLAIM = new RegExp([
+  '[\\w.-]+\\s*[=:]\\s*(completed?|success|done|failed?)\\b',
+  '(調査|確認|分析|実測|読み取り|計測|精査|抽出|集計)完了',
+  '(れば|なら|たら|ならば)[^。]{0,40}(問題な(し|く)|完了です)',
+].join('|'), 'g');
+// 「〜のが安全です」等の推奨表現は、成果物への保証ではない（実測 2026-07-21: 委ね先の推奨で C3 誤判定）。
+const C3 = /(問題ありません|問題なし|(?<!のが|ほうが|方が)安全です|保証します|万全)|(\bno issues\b|\ball (tests|checks) pass|\bfully (working|verified)|\bis safe\b|\bguarantee)/i;
+const C3b = /(完了しました|完了です|全て通りました|すべて通りました)|(\b(all )?done\b|\bcompleted?\b|\beverything (works|passes))/i;
+// 「確認」は日本語の汎用語で、外部の事実（デプロイ状態・レコードの実在）にも広く使う。
+// 裁定（2026-07-24・しろくまさん）: **Claim Integrity は成果物を主語とする主張に限る**。
+// よって確認系は成果物名詞を伴う形だけを C2 とし、裸の「確認済みです」は事実報告（C1）として扱う。
+// 「検証しました」「問題なく動作」は語自体が成果物への主張なので無条件で C2。
+const DELIVERABLE = '(動作|挙動|仕様|機能|実装|修正|成果物)';
+const C2 = new RegExp(
+  `${DELIVERABLE}(を|は|も)?\\s*(既に|すでに)?\\s*(確認しました|確認済みです|確認できました)`
+  + '|検証しました|問題なく動作'
+  + '|\\bverified\\b|\\bconfirmed working\\b|\\btested and working\\b|\\bvalidated\\b', 'i');
+const C1 = /(実装しました|修正しました|作成しました|変更しました|通過|通りました)|(\bimplemented\b|\bfixed\b|\bcreated\b|\bupdated\b|\bpassed\b)/i;
+const claimLevel = () => {
+  const t = msg.replace(QUOTED, '').replace(NOT_CLAIM, '');
+  if (C3.test(t)) return 3;
+  if (C3b.test(t)) return 3;
+  // 一般的な検証主張。ただし検査対象を明示していれば事実として扱う
+  if (C2.test(t) && !SPECIFIC.test(msg)) return 2;
+  if (C1.test(t)) return 1;
+  return 0;
+};
+const LADDER = ['未検証', 'プロジェクトのテストのみ', '裁定済み受け入れ条件で検証済み'];
+const claimIntegrity = (evidence) => {
+  const c = claimLevel();
+  const allowed = evidence >= 2 ? 3 : evidence === 1 ? 1 : 1;   // E1 でも「検証済み」は名乗れない
+  if (c <= allowed) return null;
+  return `【Claim Integrity 違反】報告の主張が、存在する証拠より強すぎます。\n`
+    + `- 証拠の強さ: E${evidence}（${LADDER[evidence]}）\n`
+    + `- 主張の強さ: C${c}\n`
+    + `この証拠で名乗れるのは C${allowed} までです。`
+    + `「実装した」とは言えますが、「検証した」「完了した」とは言えません。\n`
+    + `報告を書き直してください。何を確認し、何を確認していないかを分けて書くこと。`;
+};
+
+// 「過大な主張を止める」と「正しい開示をさせる」は別物。
+// 実測: 抑止は 3/3 効いたが、開示は 1/3 しか出なかった（残り2件は無言で終了）。
+// 無言は嘘ではないが、非エンジニアは未検証だと気づけない。よって開示も block で強制する。
+// 自然な言い方の開示も認める（2026-10-20 実測: 「DB 接続・実行はしていません」と正直に書いた報告が
+// 定型の語を含まないため差し戻され、定型文の貼り付けを強いていた）。対象は「実行・試験・確認」系の動詞の否定だけ。
+const DISCLOSED = new RegExp(
+  '(未検証|未実行|未実施|検証されて(いない|いません)|受け入れ条件が(未定義|ありません|ない)|保証(できません|していません|されていません)|確認できていません)'
+  + '|(実行|試験|テスト|検証|動作確認|確認)(は|も)?(まだ)?(して(い)?ません|していない|できていません|できていない)'
+  + '|(走らせて|流して|回して)(い)?ません'
+  + '|(\\bnot verified\\b|\\bunverified\\b|\\bno acceptance criteria\\b|\\bcannot guarantee\\b|\\bnot confirmed\\b'
+  + '|\\bnot (yet )?(run|tested|executed)\\b|\\bhave(n\'t| not) (run|tested|executed)\\b)', 'i');
+// 開示の強制は 1 利用者 1 回だけ。毎ターン差し戻すと恒久的な税になる。2 回目以降は block せず、文脈で伝えるにとどめる。
+// 印はプロジェクト内と利用者の home の両方に置く。プロジェクト内だけだと、作業のたびに新しいディレクトリを作る使い方
+// （別の AI の作業場所・使い捨ての検証ディレクトリ）で毎回「初回」になり、毎回差し戻していた（2026-10-20 実測）。
+// DEVOS_STATE_HOME は自己検査が本物の印を汚さないための差し替え口。
+const askedFlag = join(dir, 'disclosure-asked');
+const userDir = join(process.env.DEVOS_STATE_HOME || join(homedir(), '.claude'), '.devos');
+const userAskedFlag = join(userDir, 'disclosure-asked');
+const needDisclosure = (evidence) => {
+  if (evidence >= 2) return null;
+  if (DISCLOSED.test(msg)) return null;
+  if (claimLevel() === 0 && msg.length < 40) return null;   // 何も報告していないなら求めない
+  if (existsSync(askedFlag) || existsSync(userAskedFlag)) return null;   // 一度教えたら以後は求めない
+  try { mkdirSync(dir, { recursive: true }); writeFileSync(askedFlag, '1'); } catch {}
+  try { mkdirSync(userDir, { recursive: true }); writeFileSync(userAskedFlag, '1'); } catch {}
+  return `報告に「検証されていない」という事実が書かれていません。\n`
+    + `証拠の強さは E${evidence}（${LADDER[evidence]}）です。\n`
+    + `読み手が未検証だと分かる 1 文を足してください。言い方は自由です（例: 「実行はしていません」「試験は流していません」「（未検証）」）。\n`
+    + `この差し戻しは初回だけです。以後は求めません。`;
+};
+
+// ── 報告形式の検査（判断欄の欠落）─────────────────
+// 回収の空振りは静かな失敗（見出しが崩れて回収ゼロでも誰も気づかない）。
+// 実質的な作業報告なのに「判断が要った点」欄が無ければ、1 セッション 1 回だけ差し戻す。
+// 弱いモデルほど形式を省略する（実測 9-1: 開示は指示だけで 1/3・block で 3/3）。
+const hasJudgmentSection = () => msg.split('\n').some((raw) => {
+  const line = raw.trim().replace(/\*\*/g, '').replace(/^[-*・#\s]+/, '');
+  return /^(判断が要った|設計判断|決めた点|前提を置)/.test(line);
+});
+const needFormat = () => {
+  // 判断欄の要求は報告の形式が full の時だけ (.claude/devos.json の "profile": "light" か "report": "minimal"/"off" で外せる・2026-10-20)
+  const reportMode = ['full', 'minimal', 'off'].includes(cfg.report) ? cfg.report : (cfg.profile === 'light' ? 'minimal' : 'full');
+  if (reportMode !== 'full') return null;
+  if (st.formatAsked) return null;
+  if (msg.length < 120 || claimLevel() === 0) return null;   // 短い返答・作業報告でないものは対象外（日本語 120 字 ≈ 実質的な報告の下限）
+  if (hasJudgmentSection()) return null;
+  st.formatAsked = true; save();
+  return `報告に「**判断が要った点**」の欄がありません（無い場合も「なし」と書く決まりです）。\n`
+    + `この欄が無いと、あなたの判断は記録されず、次のセッションに引き継がれません。\n`
+    + `報告の形式: ①結果 ②判断が要った点（無ければ「なし」） ③締めは次のアクション。`;
+};
+
+// ── 責任境界の受け渡し（E5 契約・2026-07-21）───────────
+// 実行制御層が読む機械可読の判定（E5 契約）。
+// 生成は dev-os のみ・一方向。実行時状態なので git 管理しない。
+// 判定は「どの成果物についての緑か」を宣言する（契約 §成果物紐づけ・2026-07-26）。
+// これが無いと消費側は cwd の緑で無関係な repo の本番反映を通してしまう（実測: A repo の
+// セッション判定で B repo 8 本の push が承認され得た）。git rev-parse は数 ms・毎ターン可。
+const gitArtifact = () => {
+  const read = (cmd) => {
+    try { return execSync(cmd, { cwd, stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim() || null; }
+    catch { return null; }
+  };
+  return { repo: read('git rev-parse --show-toplevel'), head_sha: read('git rev-parse HEAD') };
+};
+
+const writeVerdict = (verdict, evidence) => {
+  try {
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(join(dir, 'verdict.json'), JSON.stringify({
+      verdict, evidence,
+      failures: failures.map((f) => String(f).slice(0, 200)),
+      invariants: invFiles.length,
+      session: sid,
+      at: new Date().toISOString(),
+      ...gitArtifact(),
+    }, null, 2));
+  } catch {}
+};
+
+// ── 判定 ────────────────────────────────────
+if (!ranAnything) {
+  writeVerdict(invFiles.length > 0 || !!cfg.command ? "INVALID" : "UNSPECIFIED", 0);
+  harvest();
+  const ci = claimIntegrity(0) || needDisclosure(0) || needFormat();
+  if (ci && st.blocks < cfg.maxBlocks) { st.blocks += 1; save(); out({ decision: "block", reason: ci }); }
+  // INVALID の注意喚起は 1 セッション 1 回だけ。
+  // 毎ターン付けると、開示済みの応答にも警告が乗り続け、harness 側で応答ループを誘発する（2026-07-21 実測）。
+  if (st.invalidTold) out(slowWarning
+    ? { hookSpecificOutput: { hookEventName: 'Stop', additionalContext: slowWarning.trim() } } : {});
+  st.invalidTold = true; save();
+  // 設定ゼロ（invariants なし・command なし）は「検査が走らなかった」ではなく「条件が未定義」＝ UNSPECIFIED。
+  // 従来はここで INVALID と誤表示され、下方の UNSPECIFIED 分岐は設定ゼロでは到達不能だった（2026-07-21）。
+  const configured = invFiles.length > 0 || !!cfg.command;
+  out({ hookSpecificOutput: { hookEventName: 'Stop', additionalContext:
+    (configured
+      ? '【品質ゲート: INVALID】検査を1つも実行できませんでした。'
+        + (failures.length ? `\n${failures.join('\n')}\n` : '')
+      : '【品質ゲート: UNSPECIFIED】受け入れ条件が定義されていません（`.claude/invariants/` なし・`devos.json` の command なし）。')
+    + '**「通りました」「完了しました」と報告しないでください。**検証されていない状態です。'
+    + '（未検証だと分かる言い方なら自由。定型文を毎回貼る必要はありません）' + slowWarning } });
+}
+
+if (failures.length && st.blocks < cfg.maxBlocks) {
+  writeVerdict("FAIL", invFiles.length ? 2 : 1);
+  st.blocks += 1; save();
+  out({ decision: 'block', reason:
+    `受け入れ条件が満たされていません（${st.blocks}/${cfg.maxBlocks} 回目）。\n\n`
+    + failures.join('\n\n') + '\n\n'
+    + '検査を「消す」「回避する」「対象を減らす」のではなく、条件を満たす実装にしてください。'
+    + '解けない場合は、解けないと報告してください。' });
+}
+
+if (failures.length) {
+  writeVerdict("FAIL", invFiles.length ? 2 : 1);
+  harvest();
+  out({ hookSpecificOutput: { hookEventName: 'Stop', additionalContext:
+    `【品質ゲート: FAIL（差し戻し上限）】まだ満たされていない条件があります。\n${failures.join('\n')}\n`
+    + '**「完了しました」と報告しないでください。**どこまでやって何が残っているかを報告してください。' + slowWarning } });
+}
+
+// 全て通った。ただし受け入れ条件が1つも無いなら「検証済み」とは言わせない。
+const n = harvest();
+if (invFiles.length === 0) {
+  writeVerdict("UNSPECIFIED", 1);
+  const ci = claimIntegrity(1) || needDisclosure(1) || needFormat();
+  if (ci && st.blocks < cfg.maxBlocks) { st.blocks += 1; save(); out({ decision: "block", reason: ci }); }
+  out({ hookSpecificOutput: { hookEventName: 'Stop', additionalContext:
+    '【品質ゲート: UNSPECIFIED】`.claude/invariants/` に受け入れ条件が1件もありません。'
+    + 'プロジェクトのテストは通りましたが、**それが仕様を満たす証拠にはなりません**。'
+    + '未検証だと読み手に分かる形で書いてください（言い方は自由・定型文を毎回貼る必要はありません）。'
+    + (n ? `\n判断 ${n} 件を DECISIONS.md に candidate として記録しました${whereNote()}。` : '') + slowWarning } });
+}
+writeVerdict("PASS", 2);
+{
+  const fi = needFormat();
+  if (fi && st.blocks < cfg.maxBlocks) { st.blocks += 1; save(); out({ decision: 'block', reason: fi }); }
+}
+out(n ? { hookSpecificOutput: { hookEventName: 'Stop', additionalContext:
+  `【品質ゲート: PASS】受け入れ条件 ${invFiles.length} 件すべて合格。`
+  + `判断 ${n} 件を DECISIONS.md に candidate として記録しました${whereNote()}。裁定をお願いします。` + slowWarning } }
+  : (slowWarning ? { hookSpecificOutput: { hookEventName: 'Stop', additionalContext: slowWarning.trim() } } : {}));

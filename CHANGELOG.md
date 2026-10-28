@@ -1,0 +1,336 @@
+# Changelog
+
+## [Unreleased]
+
+## [2.4.2] - 2026-10-29
+
+### 追加
+- **出荷前の検査結果に「どの repo の、どの版か」を書く**（`hooks/stop.mjs`）。`.claude/.devos/verdict.json` に
+  `repo`（`git rev-parse --show-toplevel`）と `head_sha`（`git rev-parse HEAD`）を足す。消費側は合格を版に結びつけて照合でき、
+  別の repo や編集後の版に古い合格を使い回せなくなる。git が無い・失敗した時は `null`（判定そのものは止めない）
+- `session-operations`: 6 本目の柱「担当セッション制と配信往復」を追加
+
+### 変更
+- 内部文書への参照と特定の製品名をコメントから外し、「実行制御層」「E5 契約」の一般名にした（動作は変わらない）
+- この版から履歴を新しく始めた（以前の履歴は公開しない）
+
+## [2.4.1] - 2026-10-28
+
+### 修正
+- **git worktree で動いたセッションの記録を、repo の本体の checkout に書く**（`hooks/stop.mjs`・新規 `hooks/record-place.mjs`）。
+  従来は cwd（= worktree）の `DECISIONS.md` / `PLAYBOOK.md` に追記していた。Claude Code は作業ごとに worktree を作るので、
+  追記はどの worktree でも commit されず撤去で消え、終わった worktree が「未取り込みの変更あり」に見え続けていた
+  （実測: ある repo では取り込み待ち 22 件中 8 件が、残っていたのはこの追記だけ。人が手で拾い集めていた）。
+  - 置き場所: `git rev-parse --git-dir` と `--git-common-dir` が違う時（= linked worktree）だけ、common dir から本体の checkout を求めて
+    そこへ書く（worktree の下位ディレクトリで動いていたら本体の同じ下位ディレクトリへ・無ければ本体の直下）。
+    submodule は common dir の `core.worktree` から、通常の repo は `<本体>/.git` から求め、同じ common dir を指すかを確かめてから使う
+  - **worktree でない時は従来と 1 字も変わらない**: 本体の checkout（下位ディレクトリを含む）・git 管理外・bare repo の worktree（本体の作業ツリーが無い）・
+    git が無い/失敗した時は cwd に書く。本体の checkout に書けなかった時も cwd に戻す（記録は止めない）
+  - 書き方: 無いファイルは見出しだけの一時ファイルを link で置き（既にあれば失敗する 1 手）、塊は O_APPEND の 1 回の write で足す。
+    同時に書いても見出しは先頭に 1 回・塊は欠けず混ざらない。同じ `## <id>` が既にあれば足さない
+  - 新しい tracked ファイルの置き場所や別の保存先は作らない: 本体の checkout で動くセッションが今まで書いていたのと同じファイルに集まる
+- `hooks/intake.mjs` も同じ場所から読む（裁定済みの手順・溜まっている数）。書く場所と読む場所がずれると worktree では見えないため
+- 自己検査 36 → 52（`benchmarks/self/worktree-record.mjs`: worktree → 本体・差分を残さない・2 つの worktree から同時 8 件・同じ瞬間の作成と追記の競合 30 回・
+  撤去しても残る・下位ディレクトリ・bare・submodule・git 管理外・intake）。すべて空白を含むパスで実施。
+  旧版の `stop.mjs` に戻すと 10 件赤・旧来の作成+追記に戻すと競合の検査が赤・冪等の検査を外すと赤になることを確認
+
+### 既知の残り
+- 既に各 worktree の `DECISIONS.md` に溜まっている追記は移さない（この版より前に書かれた物は手で本体へ寄せる）
+- bare repo + worktree だけの構成では、本体の作業ツリーが無いので従来どおり worktree に書く
+
+## [2.4.0] - 2026-10-20
+
+### 変更（必要な重さだけにする・作法を利用者が替えられるようにする）
+- **境界線マップの節を話題で出し分ける**（`hooks/intake.mjs`）: `## ` の節に `<!-- devos: topics=… -->` を付けると、いつもは見出しと要点 1 行だけ、
+  依頼にその語が出た時（全文の回でなくても）その節の全文を付ける。印の無い節は従来どおり（印を付けない限り出力は 1 字も変わらないことを旧版と突き合わせて確認）。
+  実測: ある運用の全文 8,930 字のうち約 5,000 字は MCP・メール送信など、その話題の作業でしか使わない節だった
+- **作法の既定値を設定に**（`.claude/devos.json`）: `"profile": "light"` / `"report": "full"|"minimal"|"off"` / `"decisionsQueue"`。
+  既定は従来どおり。`light` では報告の形式を 3 行にし、★ の基準・「決めてほしいこと」を差し込まず、判断欄の差し戻しもしない（`hooks/stop.mjs`）。
+  芯（未検証の開示・証拠を超えた完了の主張の差し戻し・境界の宣言）は替えない
+- 自己検査 29 → 36（節の出し分け 5・light の 2）。変異で 2 系統とも赤を確認
+
+## [2.3.0] - 2026-10-20
+
+> 版の番号の直し: plugin.json の version が 2.0.0 のまま止まっていた（2.1.0 / 2.2.0 は CHANGELOG だけが進んでいた）。
+> プラグインの更新は version で判断されるため、2.0.0 以後の変更が入れた人に届いていなかった。この版で番号を揃える。
+
+### 修正
+- **`hooks/stop.mjs` — 未検証の開示を自然な言い方でも認め、差し戻しは利用者ごとに 1 回だけにする**（15d2350）。
+  「実行はしていません」等の正直な自然文が定型語を含まないため差し戻され、定型文の貼り付けを強いていた。
+  また「一度教えた」印がプロジェクト内だけにあり、作業のたびに新しいディレクトリを作る使い方（別の AI の作業場所等）で毎回差し戻していた。
+  印を利用者の home にも置く（`DEVOS_STATE_HOME` で差し替え可）。`hooks/intake.mjs` の「初回だけフル文」の指示も「言い方は自由の 1 文」に揃えた。自己検査 26 → 29
+
+### 追加
+- **`plugins/attack-defend-duel`**（同じ marketplace の別プラグイン・スキル 1 本・フック無し・dev-os 無しで単独で入る）— 守りの約束が破れないかを、別の AI（Codex 等）に攻めの試験を書かせ、
+  Claude が使い捨て環境で審判する段取り。役を分ける理由（見落としの相関を切る・書き上がる物の向きが違う）、本番に流れない関門、
+  守りを 1 か所ずつ外して試験が効くかを見るミューテーションと「二重の守り」の読み分けを含む。環境別の参照 4 本
+  （PostgreSQL・Supabase / MySQL / Firebase のルール / アプリの API）。2026-10 の実地 1 回目から、製品名・ID・攻めの手順を剥いて作った。
+  同梱時点の版は v1.2.0（判定 4 つと陽性対照・未検証を見せる表 `coverage.mjs`・約束の一覧と OWASP 対応・CI の雛形・発火の試験 10/10）
+- **`skills/breach-resilience`**（第 2 層・発火条件は狭い）— 鍵・ログイン・開発権限・開発機が奪われた前提で、
+  「届く範囲 / 気づき方 / 止め方 / 所要時間」を実測で埋める点検の型。既存の security 系の skill（コードの穴探し）とは軸が違う
+  （入られた後の点検）。参照 6 本（鍵の移行の 7 段・Supabase・Vercel・ソース管理と CI・アプリ間の合言葉と MCP・送信の鍵）と
+  ひな形 2 本（runbook・毎週の固定点検）。落とし穴は 2026-10 に実地で踏んだものだけを日付付きで載せ、製品名・ID・URL・社内の数字は入れていない
+- trigger-eval に 3 件（positive 2・negative 1 = コードの脆弱性レビューでは発火しない）
+
+## [2.2.0] - 2026-09-23
+
+### 変更（しろくま決定 = ★ の基準を締め直す + 締めの定型をやめる の合わせ技）
+
+`hooks/intake.mjs` の 2 箇所。**判断回収の実装（`hooks/stop.mjs`）は不触** — 2026-07-24 の
+`a9fa829`（既定を task-local へ反転・★ が付いた行だけ candidate）は正しく動いていた。
+
+- **★ を付けない物の実例を明記**（「完了報告の形式」節）。実測が根拠 = 溜まっていた候補 8 件を
+  読み直したら **全件が ★ の定義に当てはまらなかった**: ①観察・計測結果 ②自分が前に書いた
+  数字・事実の訂正 ③既存の決定・正典から導けた処理 ④その作業限りの粒度・分割の選択
+  ⑤再利用できる手順（→ 手順節へ回す）。**★ を 1 つ付けるたびに人の時間を 1 回使う**を明示
+- **「報告の締めに件数を 1 行添えること」を削除**。毎回の定型は催促になり、大事な結果を
+  埋もれさせる。件数の可視化そのものは残す（AI は知っているが、自分から持ち出さない）
+- **三択を出す前に中身を読む**を追記。実測 = 中身を読まずに原因を想像して三択にしたら、
+  読んだ瞬間に選択肢そのものが変わった。0 件なら「0 件です」で止まるのも正解・
+  出した問いが実測で消えたら取り下げを伝える
+
+### 実測の根拠
+
+- **真因の確定**: `hooks/` の直近 commit は `a9fa829`（2026-07-24）で **2 ヶ月間不変**。
+  にもかかわらず候補が 0 件 → 8 件に戻った ⇒ 原因は機械ではなく **書き手の ★ の付け方**
+- **★ の有無は台帳を grep しても測れない**: `stop.mjs` は candidate として積む時に
+  `p.replace(/^[★*＊]\s*/, '')` で ★ を剥がす。so 「DECISIONS.md に ★ が無い」は
+  「★ が付いていなかった」の証拠にならない（この誤読を 1 回した）。
+  **status が candidate = ★ が付いていた行**、と読む
+- 対照 3 本（実走）: ①候補 8 件の repo → 新ブロックが出て締めの指示が消えた
+  ②候補 0 件の repo → 件数の節は出ず、★ の基準だけが出る（全 repo で効く）
+  ③旧版と新版を同じ入力で走らせ、「報告の締めに次の趣旨」の有無が反転することを確認
+
+## [2.1.0] - 2026-08-25
+
+### 追加
+- `session-operations` 柱 6「担当セッション制と配信往復 (dispatch round-trip)」— しろくまSaaS の「工事屋さん」運用 (1 アプリ 1 担当セッション + send_message 配信 + 完了報告の往復 + 人間承認ゲート) から固有名を剥いで還流。子側の固有差分 = しろくまSaaS hub `.claude/skills/koujiya-dispatch/SKILL.md` (名簿・雛形・promote-biz)
+
+## [2.0.0] - 2026-07-20
+
+**破壊的変更。削除はゼロ、移動と発火条件の変更のみ。**
+
+### 追加
+- `hooks/` — UserPromptSubmit（受け口検査 + doctrine + 境界マップ注入）と
+  Stop（受け入れ条件の検査・完了ブロック・Claim Integrity・判断の回収）
+- `doctrine/core-2000.md` — 常時ロードする 1,956 字。実測で 34KB と同等以上を +3.1% のトークンで
+- `benchmarks/` — 課金なしの自己検査（8/8）・フック起動検査（4/4）・採点器の検証（5/5）＋ モデル署名
+- `templates/BOUNDARIES.*` — 境界線マップと聞き取りテンプレート
+- `skills/boundary-authoring/` — 事業側への聞き取りで BOUNDARIES.md を組み立てる
+
+### 変更
+- `skills/guardrails` → `skills/guardrail-authoring`（検出器を書く時のみ発火）
+- `staff-officer` / `doc-constitution` / `session-operations` の発火条件を大幅に狭めた
+- 判定を四値化: PASS / FAIL / **INVALID**（測れなかった）/ **UNSPECIFIED**（受け入れ条件が未定義）
+  → 後ろ 2 つは止めないが「緑」とも言わせない
+
+### 移動（削除ではない）
+- `skills/engineering-doctrine` と `engineering-doctrine-universal`（計 33KB）
+  → `docs/doctrine-full.md`。**自動発火しない on-demand 資料へ**
+
+### 実測の根拠
+約 300 run。詳細は docs/ と benchmarks/ を参照。
+- 弱いモデルの逸脱率: モデル間 72 ポイントの開き → 0
+- 完了ブロック: 機能的正しさ 0/6 → 6/6（Haiku・圧力条件）
+- 決定記録: 人間が 1 回裁定すると 2 反復目から Opus 素を超え、5 反復連続で安定
+- **裁定しないとループは誤りを固定する**（「過去5セッションとも同じ判断だったため踏襲」）
+
+### 未検証
+**実プロジェクトでの使用実績はゼロ。** README の該当節を必ず読むこと。
+
+### 修正（2026-07-21・実運用初日に発見した 4 件。2.0.0 未公開のため本エントリに折り込み）
+- **Stop フックの INVALID 通知に抑制がなく、設定ゼロのプロジェクトで空ターンの無限ループ**（実測 9 連続発火）。
+  additionalContext は harness によってはモデルを再起動させるため、`invalidTold` で 1 セッション 1 回に
+- 設定ゼロ（invariants なし・command なし）を INVALID でなく **UNSPECIFIED** に正しく分類
+  （従来は UNSPECIFIED 分岐が設定ゼロでは到達不能だった）
+- 壊れた invariant のエラー詳細を INVALID メッセージに表示（従来は握り潰し）
+- **Claim Integrity 誤検知 2 種を fixture 化して修正**: 「〜のが安全です」等の推奨表現（lookbehind 除外）と、
+  「」『』/backtick 引用内の発火語（主張判定前に引用を除去）。自己検査 8 → 10 fixture・10/10
+- 注: 実験 harness の生ログ・fixture 原本は公開物から除外（2026-07-21 裁定・事業由来の判断経緯を含むため）。ローカルと private バックアップに保全
+- **intake の境界マップ注入文言を強化**（同日 E2' 実測 42 run に基づく）:
+  冒頭 3 行宣言の要求・停止条件の先頭配置・「型定義から可否を推定してはならない」の明示・停止許可の明文化。
+  昇格率の用量反応: 注入(旧) 1/6 → 注入(強化) 3/6 → **二重化(+SPEC 1行) 5/6** → prompt 全文 3/3。
+  昇格が届いた run は通算 18/18 で受け入れ条件全通過
+- **boundary-authoring に「README へ 1 行追記までが仕事」を追加**（二重化の製品化）。
+  旧記載「昇格 3/3」を経路別実測へ正確化
+- **DECISIONS.md テンプレートに裁定提示ルールを追加**（実運用フィードバック 2026-07-21）:
+  裁定は 1 件ずつ・工程用語なしの「今後 AI はこうします」形式・推奨付き・はい/いいえ/保留の三択。
+  工程用語の一括提示は非エンジニアには裁定不能（実測）。保留は削除しない
+- **判断回収の既定を task-local へ反転 — 人に届くのは普遍ルールだけ**（2026-07-24・しろくまさん裁定）:
+  実運用で溜まった 6 件を実測したところ、**普遍ルールは 0 件**（実装細部 2・観察 2・回収バグの断片 2）。
+  「目先に限局した判断を要求されるのはストレス」の指摘どおりだった。
+  - **分類を報告時に前倒し**: 判断は既定で `task-local`（記録のみ・聞かない）。
+    報告の**行頭に ★ を付けた行だけ** `candidate` になる（intake が付け方を注入）。
+    後から人間が仕分ける設計（二分ルール）をやめ、文脈が最も濃い時点で AI が分ける
+  - 手順回収（PLAYBOOK.md）にも同じ規律を適用
+  - 「発見/補足/注記/参考/残作業/所感/備考」見出しで回収を打ち切る（見出し断片の混入を遮断）
+  - 実測: この作業フォルダの表示が **6 件 → 0 件**。fixture 26 件・自己検査 26/26
+  - 併せて自己検査ハーネスの scope バグを修正（ヘッダー説明文を回収本文と誤判定していた）
+- **Claim Integrity 誤検知 4 種を修正 — 実運用 3 日分の実測から**（2026-07-24）:
+  17 セッション中 4 つが差し戻し上限（3 回）に到達し、その主因が Claim Integrity の誤検知だった。
+  共通の型は「**主語が成果物でない完了語**」。判定前に次を除去する:
+  ①データ値（`status=completed` / `conclusion: success`）②行為の完了（調査完了・実測完了。
+  実装完了・移行完了は成果物の主張なので除外しない）③条件付きの見立て
+  （〜れば…問題なし／〜いただければ完了です）。
+  止められた実文 18 件で検証: 発火 18 → 3。
+- **Claim Integrity を「成果物を主語とする主張」に限定**（2026-07-24・しろくまさん裁定）:
+  「確認」は日本語の汎用語で外部の事実（デプロイ状態・レコードの実在）にも使うため、
+  確認系は**成果物名詞（動作/挙動/仕様/機能/実装/修正/成果物）を伴う形だけ**を検証主張とする。
+  裸の「確認済みです」は事実報告（C1）へ。「検証しました」「問題なく動作」は語自体が
+  成果物への主張なので無条件で C2 のまま。
+  **実文 18 件での最終検証: 発火 18 → 1**（残 1 =「commit まで完了しました」= 仕様どおりの正当な block）。
+  回帰ガード「動作は確認済みです」は引き続き block。fixture 23 件・自己検査 23/23
+- **E5 責任境界の受け渡しを実装**（2026-07-21）: stop フックが毎ターン `.claude/.devos/verdict.json`
+  （四値 + 証拠段位 + failures + 鮮度）を出力。実行制御層向けの参照消費者
+  `scripts/verdict-gate.mjs` を同梱（PASS∧E2 のみ許可・FAIL は理由付き承認要求・
+  INVALID/UNSPECIFIED は「失敗でなく保証なし」としてリスク分類分岐・陳腐化した緑の再利用禁止）。
+  全分岐スモーク実測済み。契約は E5-CONTRACT.md
+- **Fable 5 の署名と壁を測定**（2026-07-21・24 run）: 署名 = 逸脱 0/17・逃げ方 none（models.json 保存）。
+  壁 = 21/25・B 0/4 × 6/6 で Opus/Sonnet/Haiku と完全同一（単価 3.5 倍レンジで 1 点も動かない）。
+  「事業判断は金で買えない」が現行最上位モデルまで実測で閉じた。README の表へ反映
+- **報告形式の検査を新設 — 回収の静かな空振り防止**（2026-07-21・しろくまさん裁定）:
+  実質的な作業報告（120 字以上 ∧ 主張あり）に「判断が要った点」欄が無ければ 1 セッション 1 回だけ差し戻す。
+  弱いモデルほど形式を省略し（実測 9-1: 指示のみ 1/3 → block 3/3）、欄が崩れると判断の回収が
+  誰にも気づかれず空振りするため。DevOS+Sonnet 運用（学習ループが回収に依存）の前提整備。
+  fixture 12 件（正常例=欄あり長文・違反例=欄なし長文を追加）
+- **実運用フィードバック 3 件を反映**（2026-07-21・同日 3 件目）:
+  ①決めてほしいことの可視化 — candidate があるとき報告の締めに 1 行添える。
+  文言は「決めてほしいことが N 件あります。**1 回答えるだけで、AI は次からずっとその通りに動きます**
+  （『決めて』でいつでも）」。「裁定」等の用語は人間向けには使わない・「急ぎません」でなく
+  ベネフィット（1 回の回答が永続する）を訴求する（同日フィードバックで文言を 2 回改訂）
+  ②未検証開示の頻度 — 初回のみフル文・以後は「（未検証）」の短い印（毎回フル文はストレス。
+  検査ロジックは不変更・定型文の頻度のみ） ③報告の順序 — 結果 → 判断が要った点 → 締めは
+  次のアクション（大事な結果と次の一手を定型の後ろに埋もれさせない）
+- **PLAYBOOK.md — 手順の裁定ゲートを新設**（2026-07-21）: AI が作業後に「再利用できそうな手順」を
+  candidate として残し、**人間が adopted にした手順だけ**が以後のセッションへ注入される。
+  生成は AI・権限は人間。裁定なしの自己改善は誤りを先例化する（9-5 実測）ことへの構造的回答。
+  DECISIONS.md と同一ライフサイクル・同一裁定 UX・依頼文脈付き
+- **判断回収に文脈と二分を導入**（実運用フィードバック 2026-07-21・同日 2 件目）:
+  ①intake がセッション最初の依頼要旨を保存し、harvest が `> 依頼:` としてセッション見出しに添付
+  （文脈のない candidate は「何の作業の判断か」不明で裁定不能だった）
+  ②裁定前に「作業限りの解釈（task-local・裁定不要）」と「普遍ルール（裁定対象）」を二分するルールを
+  テンプレートへ追加 ③末尾の未検証開示文が candidate に混入する回収バグを修正
+- **判断回収の誤回収 2 種を fixture 化して修正**（2026-07-22・実運用実例）:
+  「次のアクション」配下（報告の締め）と裁定 UX の定型文（「決めてほしいことが N 件あります」）が
+  candidate として DECISIONS.md に混入していた（shirokuma_SaaS 実例 8c6cc3a0・81e448e4。
+  どちらも 2026-07-21 に導入した報告順序・可視化文言が生んだ新しい行 = 自作の定型を自分で回収した）。
+  抽出の break に 2 パターンを追加。手順回収（PLAYBOOK.md）も報告形式上「次のアクション」が直後に来る
+  同型構造のため同時に遮断。fixture 3 件追加（判断の行が回収され続けることも担保・旧実装で 3 件とも
+  赤を確認 = 検出力実証）。自己検査 12 → 15/15
+
+## [2.0.0 codex] - 2026-07-21
+
+- **Codex 対応を 2.0 へ追随**: .codex-plugin/plugin.json を 2.0.0 に更新（旧 6 skill 記述の正典乖離を解消）。
+  hooks/hooks.json を可搬化（`${CLAUDE_PLUGIN_ROOT:-$PLUGIN_ROOT}`）し、**Codex 0.144 でもフック 2 本が発火することを live 実測**
+  （codex exec 内で intake の依頼要旨保存と stop の状態生成を確認）。
+  Codex 版は「skill 集」からフック込みの門番へ実質アップグレード
+
+## [1.5.1] - 2026-07-11
+
+trigger eval の初 live 実測 (`claude /login` 後) と、その結果に基づく description tuning。
+
+### Measured (dev-os 初の発火実測)
+- pilot 15 case を live 実行 (較正 1 call で Skill tool_use 検出を実証)。`--max-turns` 打ち切りは trigger 計測有効として集計に含める修正 (286afb9)
+- **初 KPI (tuning 前)**: universal R0.00 / engineering-doctrine P0.67 / staff-officer P0.50 / doc-constitution R0.50 / guardrails・session-operations 1.00・negative 誤発火 0/4・3+ 同時発火 0
+
+### Changed
+- **trigger description tuning** (a0c7efc) — 4 skill の frontmatter description のみ調整 (本文・case 不変):
+  - engineering-doctrine = 「作者専用層 (TS/Supabase/Next.js)・非 TS/外部プロジェクトは universal を使う」negative 明示
+  - engineering-doctrine-universal = 非 TS (Python/Rust/Go 等) の具体 trigger 強化
+  - doc-constitution = 正典裁定・CI/実装変更に伴う文書更新の複合依頼 trigger 補強
+  - staff-officer = 「複数動詞でも 1 責務 + 付随文書化で専門 skill 領分に収まる依頼は不発火」negative 追加
+- harness に `--ids=a,b,c` (指定 case 強制再実行)
+
+### Result (同一 15 case 再計測・盛らない)
+- **単独 positive case は 6 skill 全て P/R = 1.00** (universal R0.00→1.00・engineering-doctrine P0.67→1.00・staff-officer P0.50→1.00 が改善)
+- **overlap (複合依頼) は据え置き**: doc-constitution R0.50・guardrails R0.67 (ovl-07 で複数期待の一部を取りこぼす)。複合依頼の複数 skill 同時発火は description 単独では詰め切れず別 Wave 課題
+- negative 誤発火 0/4 維持・過剰 orchestration 0/1 維持
+
+## [1.5.0] - 2026-07-11
+
+外部レビュー (2026-07-11・72/100) の指摘 5 件を全採用した Wave (計画書 §14 に対照表)。
+
+### Added
+- **staff-officer capability/risk-based routing** (344c5b1) — routing 表 (質問不発火 / 低risk 1 file = 直接実装 / 2〜5 file 1 責務 = 実装+独立review / 独立lane 2+ = 並列Worker / 競合 = 逐次化 / 価値衝突 = L0)・review NG は rework lane・worker handoff 6 項目 (objective/scope/read set/write set/完了条件/evidence) 必須化
+- **guardrails universal core / stack pack 分離** (981ac1d) — 17 script を `assets/packs/{universal 6, typescript 6, nextjs 1, supabase-postgres 3}` へ再配置 (16 file は R100 = 内容不変)・pack.json ×4 (id/scope/severity/evidence/remediation/limitations)・INVARIANTS.template を普遍 72 行 + pack fragment 20 行に分離 (missing 0 確認)
+- **init.mjs preset 対応** (a1cb651) — `--preset=minimal/saas`・`--packs`・stack 検出 (根拠付き推奨・TTY 時のみ Y/n 確認)・INVARIANTS fragment 合成・`--dry-run`・`--force` = `.bak-<日時>` backup 後上書き・placeholder 残数の正直表示 (実走 3 パターン: minimal 33 種 / saas 44 種)
+- **evals** (20216bf) — trigger eval 80 case (positive 48 / negative 20 / overlap 12) + resumable harness (`--calibrate` / `--sample` / `--resume` / `--report` / 20 件超は `--confirm-full` ガード)・behavior eval 設計 + fixture 3 本 (scope-discipline / evidence-completion / live-vs-template)
+- **audit check7 = skill 言及整合** (bfbb246) — GOVERNANCE / init.mjs / README の skill 言及が skills/ 実在と一致するかの semantic consistency 検査 (汎用・意図的 FAIL 注入で検出動作を証明済)
+
+### Changed
+- README / GOVERNANCE 第2層 / init.mjs の語調を §3.4「停止ではなく工程変更」等と整合 (guardrails 言及漏れ 3 箇所解消) (bfbb246)
+- GOVERNANCE 第2層の発火推奨セットを 6 skill 言及へ整合 (bfbb246)
+- plugin.json (Claude/Codex 両方) version 1.5.0
+
+### Honest notes (未実走の明記)
+- **eval は「整備済」であって「実走済」ではない** — headless `claude -p` が本 Mac で未認証 (Desktop 認証は子 CLI に非伝播・raw log 有) のため pilot 未実走。§7.2 KPI (precision/recall ≥ 0.90 等) の実測値は存在しない。解除 = `claude /login` 後 `--calibrate` → `--sample 15`
+- behavior eval も fixture まで・実走は同 auth 待ち。計画書 §9 Phase 2 Gate は未通過
+
+## [1.4.0] - 2026-07-11
+
+### Added
+- **Codex 対応 (dual manifest)** — codex-cli 0.144.1 で live 実測して梱包:
+  - `.codex-plugin/plugin.json` — Codex plugin manifest (`skills: "./skills/"` で既存 skills/ を直接参照 = skill 本文の複製ゼロ・1 ソース維持)
+  - `.agents/plugins/marketplace.json` — Codex marketplace 定義 (実物 ground truth `openai-bundled` / `openai-primary-runtime` の実形式に準拠。`.claude-plugin/marketplace.json` とは別 schema)
+
+### Verified (live smoke・2026-07-11・codex-cli 0.144.1)
+- `codex plugin marketplace add <repo local path>` → `shirokuma-dev-os-marketplace` 登録 ✔
+- `codex plugin add shirokuma-dev-os@shirokuma-dev-os-marketplace` → install 成功 (cache = `~/.codex/plugins/cache/<marketplace>/<plugin>/1.4.0/`・version-keyed) ✔
+- `codex exec` の skill 一覧に `shirokuma-dev-os:*` 6 skill 露出 (runtime discovery 実証) ✔
+- `codex plugin remove` + `codex plugin marketplace remove` → config.toml が backup と diff 完全一致で復元・`codex doctor` 悪化なし ✔
+- 未実測のまま: 同一 task set での behavior 実走 (§7.4)。※owner/repo (GitHub) 形式の marketplace add は同日追実測で PASS (Codex install 1.4.0 / Claude Code update 1.2.2→1.4.0)
+
+### Changed
+- 計画書 (docs/dev-os-productization-plan-2026-07-11-ja.md) の Codex ⚠ blocked 注記を実測結果で解除 (§1.2/1.3/4/4.2/7.1/7.4/8.1/8.3/9)。仮説との差分を明記: `validate_plugin.py` は不存在 (検証は CLI 内部)・strict semver 非強制・marketplace 定義は `.agents/plugins/marketplace.json`・cachebuster = version-keyed cache dir
+- plugin.json (Claude/Codex 両方) version 1.4.0
+
+## [1.3.0] - 2026-07-11
+
+### Added
+- **skills/guardrails** — 番人（番犬）と品質ゲートの型を port（source = shirokuma_SaaS hub repo `skills/shirokuma-dev-os/guardrails/` の snapshot・本文無変更 port）。収録:
+  - `SKILL.md`（中核思想「1失敗クラス = 1番人」+ 5層の防御線: pre-commit / CI ゲート / デプロイ前 / 実行時番犬 / 多層防御）+ `VALIDATION.md`（実機検証ログ）
+  - `references/` 7 本（failure-catalog = 失敗クラス→恒久対策の正典 / launch-readiness / type-safety-ratchet / supply-chain-and-sast / observability-slo / resilience-and-delivery / maturity-roadmap）
+  - `scripts/` 実装雛形 17 本（gitleaks / lefthook / CI workflow / 禁止パターン grep / any ラチェット / RLS・テナント越境 SQL / maxDuration・依存ドリフト・死活スモーク / dependabot / SAST・DAST / semgrep ルール / SLO 定義 / restore-drill）
+- plugin.json: keywords に `guardrails` / `failure-catalog` 追加・description に guardrails を反映
+
+### Changed
+- port 時の変更は旧 skill 名参照の追従 2 箇所のみ（`staff-mode` → `staff-officer`: SKILL.md 関連節 / VALIDATION.md 未検証節）。checklist・判定ロジック・references 本文は 1 byte も変更なし（md5 一致で確認）
+
+## [1.2.2] - 2026-07-08
+
+### Fixed
+- **plugin.json `repository` を string 化** — object 形式 (npm 流) だと `claude plugin install` の manifest validation で reject される。**live E2E で検出** (`claude plugin validate` は marketplace.json しか見ないため素通りしていた)
+- marketplace.json に `metadata.description` 追加 (validate warning 解消)
+
+### Verified (live E2E)
+- `claude plugin marketplace add shirokuma-post/shirokuma-dev-os` → GitHub clone + validate + 登録 ✔
+- `claude plugin install shirokuma-dev-os@shirokuma-dev-os-marketplace` → install 成功 (scope: user) ✔
+
+## [1.2.1] - 2026-07-08
+
+### Fixed
+- **README のインストール導線** — `git clone` を `~/.claude/skills/` に置く方法では skill が登録されない（個人 skill の発見は `<skill名>/SKILL.md` の 1 階層のみ・本 repo は plugin 形式）。主導線を `/plugin install` に変更し、clone は「読む / templates 展開」用と明記
+- GOVERNANCE 継承図の下流例から固有プロジェクト名を除去（generic 化）
+- v1.2.0 / v1.2.1 の git tag 付与開始
+
+## [1.2.0] - 2026-07-08
+
+### Added
+- **Intent Anchor（意図の先出し宣言）** — 「skill 遵守 ≠ skill 発火」への対策装置。原理は `engineering-doctrine`(+universal) の新節、実配置は `templates/CLAUDE.template.md` 最上段 + `staff-officer` Worker 指示テンプレ冒頭（実証: 8 Worker 並列で scope drift 0 件）
+- **skills/session-operations** — マルチセッション運用の型（1ドメイン=1セッション / 起動プロトコル30秒 / 撤退シグナル / handoff / 共有 index 書込直列化）
+- **staff-officer Phase 5（振り返り 5 軸）** + `templates/RETROSPECTIVE.template.md` — 整備物の自己更新サイクル
+- **staff-officer**: Worker 指示テンプレに「## 禁止」標準 slot（正典 blocklist / git・CI 設定の無断変更禁止 / 指示外の"ついで改善"禁止）/ SecGate に「diff の外」チェック（配布コピー・hook・生成物の grep 横断）/ Phase 4 に統合後の実測 verify
+- **doc-constitution 7 条** — 常時ロード文書のサイズ上限 + archive 運用（超過分は黙って落ちる = 静かな嘘）
+- **engineering-doctrine(+universal) 規律 3** — 「計画・起案も一次資料 first」を追加
+- `.claude-plugin/marketplace.json` / `CHANGELOG.md`
+
+### Changed
+- **GOVERNANCE**: 配布形態を「両層同梱」に確定（第 1 層 = 濃い実例集・発火推奨セットは universal + doc-constitution + staff-officer + session-operations）/ 還流を月次ルーティン化 / 「git 管理外」の旧記述を修正
+- **README**: 構成図修正（`.claude-plugin/plugin.json`）・対象読者の明記・Intent Anchor を設計思想に追加
+- staff-officer の「3 段分離テンプレ」参照を自己完結の記述に変更（外部参照切れ解消）
+
+## [1.1.0] - 2026-06-25
+- 業界用語マッピング / 配布版 `engineering-doctrine-universal` / 自己整合性 audit CI / init CLI / OSS 公開準備
+
+## [1.0.0] - 2026-05-31
+- 初版（engineering-doctrine / doc-constitution / staff-officer / GOVERNANCE / templates 3 点）

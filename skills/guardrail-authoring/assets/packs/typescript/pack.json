@@ -1,0 +1,61 @@
+{
+  "name": "typescript",
+  "description": "TypeScript / npm ecosystem 固有の番人 — any ラチェット・依存ドリフト・CI ゲート (tsc/lint/本番 build)・SCA/SAST。ecosystem 固有 (npm/node 前提) の check もここに属する。",
+  "applies_when": "package.json が存在し npm ecosystem (TypeScript/JavaScript) で開発しているプロジェクト。CI 系 template は GitHub Actions 前提。",
+  "checks": [
+    {
+      "id": "ci-guardrails",
+      "file": "ci-guardrails.yml.template",
+      "scope": "push (全 branch) / pull_request の CI ゲート",
+      "severity": "block",
+      "evidence": "4 job 構成 = gitleaks (履歴全体) / forbidden-patterns.sh / typecheck(tsc --noEmit)+lint+any-ratchet / 本番 build (tsc 緑だけをデプロイ根拠にしない = I4 対策)。いずれかの fail で CI が止まる",
+      "remediation": "fail した job の原因を根治。ゲートの無効化 (ignoreBuildErrors 等) は engineering-doctrine で禁止",
+      "limitations": "GitHub Actions + npm scripts (typecheck/lint/build) の存在が前提。actions の {{commit-sha}} pin は手動置換要。db-audit job はコメントアウト = DB を持つ場合の配線は手動。universal/typescript pack の check script (forbidden-patterns.sh 等) が checks/ に配線済であることが前提"
+    },
+    {
+      "id": "any-ratchet",
+      "file": "any-ratchet.sh",
+      "scope": "git 管理下の *.ts/*.tsx の any 系逃げ (as any / : any / as unknown as / @ts-ignore / @ts-nocheck)",
+      "severity": "block",
+      "evidence": "git grep 件数 vs checks/any-baseline.txt の baseline 比較。増加で exit 1 (単調減少のみ許可)",
+      "remediation": "正しい型 or unknown+型ガードに書き換え。減少時は baseline 更新でロック。0 到達で eslint off→error に切替え恒久ロック (type-safety-ratchet.md §5)",
+      "limitations": "baseline 未設定時は案内を出して exit 0 (通過する)。件数比較のみ = 1 減 1 増の入れ替わりは検出不能。正規表現 grep のためコメント内の文字列にも反応し得る (絶対精度は不問という設計)"
+    },
+    {
+      "id": "dep-drift",
+      "file": "dep-drift.mjs",
+      "scope": "引数で指定した複数コンポーネント dir の package.json (dependencies + devDependencies)",
+      "severity": "block",
+      "evidence": "PINNED 列挙の主要依存についてバージョン文字列を横断比較。混在 1 件以上で exit 1。caret/tilde 指定は警告表示",
+      "remediation": "主要依存は横断で同一バージョンに揃え、caret/tilde を外して完全固定 (engineering-doctrine 規律 6)",
+      "limitations": "PINNED は {{ }} placeholder のまま = 置換しないと実質 0 件検査。lockfile ではなく package.json の宣言のみ比較 (解決後の実バージョン差は見ない)。caret/tilde は警告どまりで block しない"
+    },
+    {
+      "id": "sast",
+      "file": "sast.yml.template",
+      "scope": "pull_request + main push の静的解析 (CodeQL / Semgrep / npm audit)",
+      "severity": "block",
+      "evidence": "CodeQL (データフロー解析・javascript-typescript) + semgrep --error (自前ルール + p/owasp-top-ten + p/typescript) + npm audit --audit-level=high (既知 CVE)",
+      "remediation": "新規 finding を根治。既存は baseline 管理で増加禁止",
+      "limitations": "semgrep と npm audit は fail するが、CodeQL は結果 upload のみ = block には branch protection (code scanning alerts) の設定が別途必要。languages は javascript-typescript 固定。npm audit は公開済 CVE のみ。semgrep image の {{pinned-tag}} は手動置換要"
+    },
+    {
+      "id": "semgrep-rules",
+      "file": "semgrep-rules.yml.template",
+      "scope": "TypeScript/JavaScript コードの AST (A6 特権越境 / C1 SSRF / B1 URL属性XSS / B2 body.userId 信頼 / H1 schema 指定漏れ)",
+      "severity": "block",
+      "evidence": "Semgrep の AST pattern + metavariable 解析 (grep 番人より正確・失敗カタログの AST 化)。sast.yml から semgrep --error で実行される前提",
+      "remediation": "message 記載の正規経路に修正 (Gateway 集約 / safeFetch / sanitizeUrl / session claim / .schema() 明示)",
+      "limitations": "{{ }} (共通関数名・関門 path) の置換が必須。B1 rule は pattern-regex = AST でなく正規表現。H1 rule の severity は WARNING (単体では block しない)。A6/H1 は Supabase 語彙の rule = 非 Supabase プロジェクトでは該当 rule を削って使う"
+    },
+    {
+      "id": "dependabot-sca",
+      "file": "dependabot.yml.template",
+      "scope": "npm 依存 + GitHub Actions の既知脆弱性 (CVE) と更新",
+      "severity": "warn",
+      "evidence": "GitHub Dependabot の advisory DB による週次検知 + 自動更新 PR (minor/patch は group 化)",
+      "remediation": "週次で PR を review して merge。major は個別に段階 upgrade + 検証",
+      "limitations": "PR を作るだけで block 力はない (merge は人間)。検知は公開 CVE のみ = 未知の脆弱性・供給網攻撃は別軸 (SBOM/SHA pin)。モノレポは directory entry を手動で複数追加する必要がある"
+    }
+  ]
+}

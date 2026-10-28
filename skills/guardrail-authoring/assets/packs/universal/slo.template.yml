@@ -1,0 +1,35 @@
+# SLO 定義（単一正典）。コピー先: observability/slo.yml
+# SLI=良いリクエストの割合 / SLO=目標 / error budget=100%-SLO。100%にしない。
+# 収集先非依存。Datadog/Grafana/Sloth 等のSLOツールに変換する元データとして使う。
+
+service: "{{component-name}}"
+window: 30d            # ローリング窓
+
+slos:
+  - name: availability
+    description: "良いレスポンスの割合（5xxと意図しない失敗を除く）"
+    sli:
+      good: 'status_code < 500'          # 4xx(意図的)は good 扱い
+      total: 'all_requests'
+    objective: 99.9                       # → error budget = 月 ~43分
+    alerting:
+      # バーンレート多段階（速い消費=即ページ / 遅い=チケット）
+      - { burn_rate: 14.4, window: 1h,  severity: page }
+      - { burn_rate: 6,    window: 6h,  severity: page }
+      - { burn_rate: 3,    window: 24h, severity: ticket }
+      runbook: "{{runbook-url: 可用性低下時に見る手順}}"
+
+  - name: latency
+    description: "p95 が閾値内のリクエスト割合"
+    sli:
+      good: 'latency_ms < {{500}}'
+      total: 'all_requests'
+    objective: 99.0
+    alerting:
+      - { burn_rate: 6, window: 6h, severity: ticket }
+      runbook: "{{runbook-url: レイテンシ悪化時(N+1/飽和を疑う)}}"
+
+# 通知先は運営最上位の管理者のみ（テナント/系統を越えない）。dedupe 必須。
+notify:
+  channel: "{{admin-only-channel}}"
+  dedupe: true

@@ -1,0 +1,22 @@
+# lefthook — pre-commit の番犬（失敗クラス A1）。コピー先: リポ直下 lefthook.yml
+# 導入: lefthook install （npm prepare で自動化推奨）
+# 一時 bypass（緊急時のみ）: LEFTHOOK=0 git commit ...
+#
+# 設計: ローカルに gitleaks 未導入なら「警告のみで通す」（CI で必ず止まるので二重に止めない=多層防御）。
+
+pre-commit:
+  parallel: true
+  commands:
+    gitleaks:
+      tags: security
+      run: |
+        if command -v gitleaks >/dev/null 2>&1; then
+          gitleaks protect --staged --redact --config .gitleaks.toml --no-banner
+        else
+          echo "[lefthook] WARN: gitleaks 未導入 — pre-commit 秘密スキャンをスキップ（CI で止まります）"
+          echo "[lefthook] 導入: brew install gitleaks"
+        fi
+    forbidden-patterns:
+      tags: boundary
+      # 禁止パターン番人（軽量版）。重い検査は CI に。
+      run: bash checks/forbidden-patterns.sh --staged || true
